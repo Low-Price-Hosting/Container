@@ -83,6 +83,10 @@ jobs:
             else
               echo "$image:$immutable already exists; skipping build."
             fi
+            if [[ "$DISTRIBUTION" == Centos ]]; then
+              docker run --rm "$image:$immutable" /bin/bash -c \
+                'grep -qi centos /etc/os-release && command -v yum'
+            fi
             local alias
             for alias in "$version" "$@"; do
               docker buildx imagetools create --tag "$image:$alias" "$image:$immutable"
