@@ -111,7 +111,16 @@ jobs:
 
           case "$DISTRIBUTION" in
             Alpine)
-              mapfile -t releases < <(branches | grep -E '^v3\.[0-9]+$' | sort -V | tail -n 3)
+              curl -fsSL --retry 3 \
+                https://raw.githubusercontent.com/docker-library/official-images/master/library/alpine \
+                -o alpine-library
+              mapfile -t releases < <(awk '/^Tags: / {
+                count = split(substr($0, 7), tags, ",")
+                for (i = 1; i <= count; i++) {
+                  gsub(/^ +| +$/, "", tags[i])
+                  if (tags[i] ~ /^3\.[0-9]+$/) print "v" tags[i]
+                }
+              }' alpine-library | sort -Vu)
               ((${#releases[@]}))
               for branch in "${releases[@]}"; do
                 clone_branch "$branch" x86_64
@@ -139,7 +148,16 @@ jobs:
               done
               ;;
             Fedora)
-              mapfile -t releases < <(branches | grep -E '^[0-9]+$' | sort -n | tail -n 4)
+              curl -fsSL --retry 3 \
+                https://raw.githubusercontent.com/docker-library/official-images/master/library/fedora \
+                -o fedora-library
+              mapfile -t releases < <(awk '/^Tags: / {
+                count = split(substr($0, 7), tags, ",")
+                for (i = 1; i <= count; i++) {
+                  gsub(/^ +| +$/, "", tags[i])
+                  if (tags[i] ~ /^[0-9]+$/) print tags[i]
+                }
+              }' fedora-library | sort -nu)
               ((${#releases[@]}))
               last_release=
               for branch in "${releases[@]}"; do
