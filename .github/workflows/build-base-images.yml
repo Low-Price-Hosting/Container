@@ -163,16 +163,21 @@ jobs:
                 }
               }' fedora-library | sort -nu)
               ((${#releases[@]}))
-              last_release=
+              latest_release=$(awk '/^Tags: / && /(^|, )latest(,|$)/ {
+                count = split(substr($0, 7), tags, ",")
+                for (i = 1; i <= count; i++) {
+                  gsub(/^ +| +$/, "", tags[i])
+                  if (tags[i] ~ /^[0-9]+$/) print tags[i]
+                }
+              }' fedora-library)
+              [[ -n "$latest_release" ]]
               for branch in "${releases[@]}"; do
-                clone_branch "$branch" x86_64
-                [[ -f source/x86_64/Dockerfile ]] || continue
+                clone_branch "official-images/$branch" x86_64
+                [[ -f source/x86_64/Dockerfile ]]
                 revision=$(git -C source rev-parse HEAD)
                 publish "$branch" "$revision" source/x86_64 source/x86_64/Dockerfile
-                last_release=$branch
               done
-              [[ -n "$last_release" ]]
-              publish_alias latest "$last_release"
+              publish_alias latest "$latest_release"
               ;;
             AlmaLinux)
               mapfile -t releases < <(branches | grep -E '^[0-9]+$' | sort -n)
