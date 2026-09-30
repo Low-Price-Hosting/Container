@@ -61,50 +61,40 @@ jobs:
           org=Low-Price-Hosting
           lower=$(printf '%s' "$DISTRIBUTION" | tr '[:upper:]' '[:lower:]')
           image="ghcr.io/low-price-hosting/$lower"
-          central_image="ghcr.io/low-price-hosting/container/$lower"
           mirror="https://github.com/$org/$DISTRIBUTION.git"
           source_label="https://github.com/$org/$DISTRIBUTION"
-          central_label="https://github.com/$org/Container"
           cd "$RUNNER_TEMP"
           BUILD_ARGS=()
 
           # Keep an immutable tag per source revision (and, where needed, RPM
           # repository metadata). Moving aliases update without rebuilding.
-          publish_to() {
-            local destination=$1 package_source=$2 version=$3 revision=$4 context=$5 dockerfile=$6
-            shift 6
+          publish() {
+            local version=$1 revision=$2 context=$3 dockerfile=$4
+            shift 4
             local content_key=${BUILD_CONTENT_KEY:-$revision}
             local immutable="${version}-sha${content_key:0:12}"
-            if ! docker buildx imagetools inspect "$destination:$immutable" >/dev/null 2>&1; then
+            if ! docker buildx imagetools inspect "$image:$immutable" >/dev/null 2>&1; then
               docker buildx build --progress=plain --platform linux/amd64 \
-                --label "org.opencontainers.image.source=$package_source" \
+                --label "org.opencontainers.image.source=$source_label" \
                 --label "org.opencontainers.image.url=$source_label" \
                 --label "org.opencontainers.image.revision=$revision" \
-                --file "$dockerfile" --tag "$destination:$immutable" \
+                --file "$dockerfile" --tag "$image:$immutable" \
                 "${BUILD_ARGS[@]}" --push "$context"
             else
-              echo "$destination:$immutable already exists; skipping build."
+              echo "$image:$immutable already exists; skipping build."
             fi
             if [[ "$DISTRIBUTION" == Centos ]]; then
-              docker run --rm "$destination:$immutable" /bin/bash -c \
+              docker run --rm "$image:$immutable" /bin/bash -c \
                 'grep -qi centos /etc/os-release && command -v yum'
             fi
             local alias
             for alias in "$version" "$@"; do
-              docker buildx imagetools create --tag "$destination:$alias" "$destination:$immutable"
+              docker buildx imagetools create --tag "$image:$alias" "$image:$immutable"
             done
-          }
-          publish() {
-            local version=$1 revision=$2 context=$3 dockerfile=$4
-            shift 4
-            publish_to "$image" "$source_label" "$version" "$revision" "$context" "$dockerfile" "$@"
-            publish_to "$central_image" "$central_label" "$version" "$revision" "$context" "$dockerfile" "$@"
           }
           publish_alias() {
-            local alias=$1 source=$2 destination
-            for destination in "$image" "$central_image"; do
-              docker buildx imagetools create --tag "$destination:$alias" "$destination:$source"
-            done
+            local alias=$1 source=$2
+            docker buildx imagetools create --tag "$image:$alias" "$image:$source"
           }
 
           clone_branch() {
