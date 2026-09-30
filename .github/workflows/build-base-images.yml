@@ -34,6 +34,10 @@ jobs:
       matrix:
         distribution: [Ubuntu, Debian, Centos, Alpine, Fedora, AlmaLinux, ArchLinux, RockyLinux]
     steps:
+      - name: Check out Container build files
+        if: matrix.distribution == 'Centos' && (env.SELECTED_DISTRIBUTION == 'all' || env.SELECTED_DISTRIBUTION == 'Centos')
+        uses: actions/checkout@v4
+
       - name: Set up Docker Buildx
         if: env.SELECTED_DISTRIBUTION == 'all' || env.SELECTED_DISTRIBUTION == matrix.distribution
         uses: docker/setup-buildx-action@v3
@@ -61,18 +65,21 @@ jobs:
           source_label="https://github.com/$org/$DISTRIBUTION"
           upstream_label=$source_label
           cd "$RUNNER_TEMP"
+          BUILD_ARGS=()
 
-          # Keep one immutable tag per source revision. Moving version tags do not
-          # require another build when an hourly mirror run finds no new content.
+          # Keep an immutable tag per source revision (and, where needed, RPM
+          # repository metadata). Moving aliases update without rebuilding.
           publish() {
             local version=$1 revision=$2 context=$3 dockerfile=$4; shift 4
-            local immutable="${version}-sha${revision:0:12}"
+            local content_key=${BUILD_CONTENT_KEY:-$revision}
+            local immutable="${version}-sha${content_key:0:12}"
             if ! docker buildx imagetools inspect "$image:$immutable" >/dev/null 2>&1; then
               docker buildx build --progress=plain --platform linux/amd64 \
                 --label "org.opencontainers.image.source=$source_label" \
                 --label "org.opencontainers.image.url=$upstream_label" \
                 --label "org.opencontainers.image.revision=$revision" \
-                --file "$dockerfile" --tag "$image:$immutable" --push "$context"
+                --file "$dockerfile" --tag "$image:$immutable" \
+                "${BUILD_ARGS[@]}" --push "$context"
             else
               echo "$image:$immutable already exists; skipping build."
             fi
@@ -181,9 +188,8 @@ jobs:
               docker buildx imagetools create --tag "$image:latest" "$image:$latest_major"
               ;;
             Ubuntu)
-              # Ubuntu's official container source is ubuntu-base. The current
-              # Ubuntu Git mirror contains livecd-rootfs, which has no Dockerfile.
-              upstream_label=https://git.launchpad.net/cloud-images/+oci/ubuntu-base
+              # Tags in the official-images manifest identify the supported
+              # Ubuntu OCI snapshots; all image bytes come from the org mirror.
               curl -fsSL https://raw.githubusercontent.com/docker-library/official-images/master/library/ubuntu > ubuntu-library
               mapfile -t releases < <(awk 'BEGIN {RS=""; FS="\n"} {tags=""; ref=""; for(i=1;i<=NF;i++) {if($i ~ /^Tags: /) {tags=$i; sub(/^Tags: /, "", tags)} if($i ~ /^amd64-GitFetch: /) {ref=$i; sub(/^amd64-GitFetch: /, "", ref)}} if(tags != "" && ref != "") print tags "|" ref}' ubuntu-library)
               ((${#releases[@]}))
@@ -192,7 +198,7 @@ jobs:
                 tag=${ref#refs/tags/}
                 rm -rf source context
                 git clone --quiet --depth=1 --filter=blob:none --branch "$tag" --sparse \
-                  https://git.launchpad.net/cloud-images/+oci/ubuntu-base source
+                  "$mirror" source
                 git -C source sparse-checkout set oci
                 revision=$(git -C source rev-parse HEAD)
                 manifest=$(jq -r '.manifests[0].digest | sub("^sha256:"; "")' source/oci/index.json)
@@ -223,29 +229,35 @@ jobs:
               done
               ;;
             Centos)
-              # The mirrored Hyperscale SIG source is not the general CentOS
-              # Stream base image. Build from the project's cloud rootfs.
-              upstream_label=https://cloud.centos.org/centos/
-              mapfile -t releases < <(curl -fsSL https://cloud.centos.org/centos/ \
-                | sed -nE 's/.*href="([0-9]+)-stream\/".*/\1/p' | sort -n)
+              # The org mirror contains the official Stream container-base
+              # kickstarts. Packages still come from CentOS's RPM repositories.
+              clone_branch main
+              mapfile -t releases < <(find source -maxdepth 1 -name 'CentOS-Stream-*-container-base.ks' \
+                -printf '%f\n' | sed -nE 's/^CentOS-Stream-([0-9]+)-container-base\.ks$/\1/p' | sort -n)
               ((${#releases[@]}))
+              revision=$(git -C source rev-parse HEAD)
               latest_major=
               for major in "${releases[@]}"; do
                 ((major >= 9)) || continue
-                base="https://cloud.centos.org/centos/$major-stream/x86_64/images"
-                archive="CentOS-Stream-Container-Base-$major-latest.x86_64.tar.xz"
-                if ! curl -fsIL "$base/$archive" >/dev/null; then
-                  continue
-                fi
                 rm -rf context
                 mkdir context
-                curl -fLsS --retry 3 "$base/$archive" -o context/rootfs.tar.xz
-                curl -fLsS --retry 3 "$base/$archive.SHA256SUM" -o context/checksum
-                expected=$(grep '^SHA256 ' context/checksum | sed -E 's/^.* = ([[:xdigit:]]{64})$/\1/' | head -n 1)
-                actual=$(sha256sum context/rootfs.tar.xz | awk '{print $1}')
-                [[ "$actual" == "$expected" ]]
-                printf 'FROM scratch\nADD rootfs.tar.xz /\nCMD ["/bin/bash"]\n' > context/Dockerfile
-                publish "stream$major" "$actual" context context/Dockerfile
+                cp "source/CentOS-Stream-$major-container-base.ks" context/
+                cp "source/CentOS-Stream-$major-container-common.ks" context/
+                cp "$GITHUB_WORKSPACE/centos/Dockerfile" context/Dockerfile
+                cp "$GITHUB_WORKSPACE/centos/build-rootfs.sh" context/build-rootfs.sh
+                for repo in BaseOS AppStream; do
+                  curl -fLsS --retry 3 \
+                    "https://mirror.stream.centos.org/$major-stream/$repo/x86_64/os/repodata/repomd.xml" \
+                    -o "context/$repo-repomd.xml"
+                done
+                BUILD_CONTENT_KEY=$({
+                  printf '%s' "$revision"
+                  cat context/*-repomd.xml context/Dockerfile context/build-rootfs.sh
+                } | sha256sum | cut -d' ' -f1)
+                BUILD_ARGS=(--build-arg "CENTOS_MAJOR=$major")
+                publish "stream$major" "$revision" context context/Dockerfile
+                unset BUILD_CONTENT_KEY
+                BUILD_ARGS=()
                 latest_major=$major
               done
               [[ -n "$latest_major" ]]
