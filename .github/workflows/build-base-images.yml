@@ -56,3 +56,10 @@ jobs:
         env:
           DISTRIBUTION: ${{ matrix.distribution }}
         run: bash "$GITHUB_WORKSPACE/build-base.sh" "$DISTRIBUTION"
+
+      - name: Smoke test ${{ matrix.distribution }} images
+        if: env.SELECTED_DISTRIBUTION == 'all' || env.SELECTED_DISTRIBUTION == matrix.distribution
+        shell: bash
+        env:
+          DISTRIBUTION: ${{ matrix.distribution }}
+        run: bash "$GITHUB_WORKSPACE/scripts/test-images.sh" "$DISTRIBUTION" "$RUNNER_TEMP/image-test-list.txt"

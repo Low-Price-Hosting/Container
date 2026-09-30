@@ -24,6 +24,8 @@ source_label="https://github.com/$org/$DISTRIBUTION"
 : "$RUNNER_TEMP"
 cd "$RUNNER_TEMP"
 BUILD_ARGS=()
+IMAGE_TEST_LIST="$RUNNER_TEMP/image-test-list.txt"
+: > "$IMAGE_TEST_LIST"
 
 source "$REPO_ROOT/scripts/build-common.sh"
 source "$REPO_ROOT/$script"

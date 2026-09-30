@@ -25,6 +25,7 @@ publish() {
   for alias in "$version" "$@"; do
     docker buildx imagetools create --tag "$image:$alias" "$image:$immutable"
   done
+  printf '%s\n' "$image:$immutable" >> "$IMAGE_TEST_LIST"
   # Each matrix job has its own runner; release build cache between versions.
   docker buildx prune --all --force
 }
