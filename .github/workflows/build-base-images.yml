@@ -265,8 +265,8 @@ jobs:
               done
               ;;
             Centos)
-              # The org mirror contains the official Stream container-base
-              # kickstarts. Packages still come from CentOS's RPM repositories.
+              # Build from the mirrored Stream container kickstarts and the
+              # organization's previously published CentOS base image.
               clone_branch main
               mapfile -t releases < <(find source -maxdepth 1 -name 'CentOS-Stream-*-container-base.ks' \
                 -printf '%f\n' | sed -nE 's/^CentOS-Stream-([0-9]+)-container-base\.ks$/\1/p' | sort -n)
@@ -281,16 +281,22 @@ jobs:
                 cp "source/CentOS-Stream-$major-container-common.ks" context/
                 cp "$GITHUB_WORKSPACE/centos/Dockerfile" context/Dockerfile
                 cp "$GITHUB_WORKSPACE/centos/build-rootfs.sh" context/build-rootfs.sh
-                for repo in BaseOS AppStream; do
-                  curl -fLsS --retry 3 \
-                    "https://mirror.stream.centos.org/$major-stream/$repo/x86_64/os/repodata/repomd.xml" \
-                    -o "context/$repo-repomd.xml"
-                done
+                builder_image="$image:stream$major"
+                metadata_key=$(docker run --rm "$builder_image" bash -euo pipefail -c '
+                  dnf -q makecache --refresh >&2
+                  mapfile -d "" -t files < <(find /var/cache -type f -name repomd.xml -print0)
+                  ((${#files[@]}))
+                  sha256sum "${files[@]}" | awk "{print \$1}" | sort | sha256sum | cut -d" " -f1
+                ')
+                [[ "$metadata_key" =~ ^[0-9a-f]{64}$ ]]
                 BUILD_CONTENT_KEY=$({
                   printf '%s' "$revision"
-                  cat context/*-repomd.xml context/Dockerfile context/build-rootfs.sh
+                  printf '%s' "$metadata_key"
+                  cat context/Dockerfile context/build-rootfs.sh
                 } | sha256sum | cut -d' ' -f1)
-                BUILD_ARGS=(--build-arg "CENTOS_MAJOR=$major")
+                BUILD_ARGS=(--build-arg "CENTOS_MAJOR=$major" \
+                  --build-arg "CENTOS_BUILDER=$builder_image" \
+                  --build-arg "CENTOS_METADATA_KEY=$metadata_key")
                 publish "stream$major" "$revision" context context/Dockerfile
                 unset BUILD_CONTENT_KEY
                 BUILD_ARGS=()
