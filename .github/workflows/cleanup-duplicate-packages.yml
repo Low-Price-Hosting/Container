@@ -1,0 +1,30 @@
+name: Remove duplicate Container image packages
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Delete only the duplicate Container image packages
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          for name in ubuntu debian centos alpine fedora almalinux archlinux rockylinux; do
+            package="container/$name"
+            endpoint="orgs/Low-Price-Hosting/packages/container/container%2F$name"
+            actual=$(gh api "$endpoint" --jq .name)
+            if [[ "$actual" != "$package" ]]; then
+              echo "Unexpected package: $actual" >&2
+              exit 1
+            fi
+            gh api -X DELETE "$endpoint" --silent
+            echo "Deleted $package"
+          done
