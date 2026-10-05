@@ -12,6 +12,7 @@ if [[ -f /source/config.xml ]]; then
   fi
   mkdir /recipe
   cp -a /source/. /recipe/
+  python3 /build-tools/rockylinux/prepare-description.py /recipe/config.xml
   cd /recipe
   export TERM=xterm
   ./container-build.sh --container Base --output-dir /output/result
