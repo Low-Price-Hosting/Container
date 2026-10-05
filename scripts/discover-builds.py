@@ -52,7 +52,7 @@ def targets(distribution, source, branches):
             if re.fullmatch(r'r\d+', branch):
                 major = branch[1:]
                 releases.append(dict(version=major, branch=branch,
-                                     bootstrap=f'docker.io/library/rockylinux:{major}', aliases=[]))
+                                     bootstrap=f'quay.io/rockylinux/rockylinux:{major}', aliases=[]))
     elif distribution == 'ArchLinux':
         releases.append(dict(version='rolling', branch='main',
                              bootstrap='docker.io/library/archlinux:base', aliases=['latest', 'base']))

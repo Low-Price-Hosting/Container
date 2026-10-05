@@ -36,7 +36,13 @@ def parse_recipe(recipe):
         parser.readKickstart(str(recipe))
     finally:
         os.chdir(previous)
-    if any(script.type != constants.KS_SCRIPT_POST for script in handler.scripts):
+    for script in handler.scripts:
+        if script.type == constants.KS_SCRIPT_POST:
+            continue
+        # Rocky 8 starts Anaconda's installer bus here. A rootfs-only build
+        # has no Anaconda process, so this particular installer setup is unused.
+        if script.type == constants.KS_SCRIPT_PRE and script.script.strip() == 'dbus-broker-launch --scope=none':
+            continue
         raise RuntimeError('New non-post script requires a container build adapter')
     p = handler.packages
     if not p.nocore or p.default or p.environment or p.groupList or p.excludedGroupList:
@@ -102,6 +108,8 @@ def build(recipe, major, root):
             run('mount', '--make-rprivate', str(dest))
             mounted.append(dest)
         for script in handler.scripts:
+            if script.type != constants.KS_SCRIPT_POST:
+                continue
             if script.inChroot:
                 script_path = root / 'tmp/container-upstream-post.sh'
                 script_path.parent.mkdir(exist_ok=True)
