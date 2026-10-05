@@ -1,51 +1,34 @@
 #!/usr/bin/env bash
-# Shared mirror checkout, tagging, and publishing functions.
-# Keep an immutable tag per source revision (and, where needed, RPM
-# repository metadata). Moving aliases update without rebuilding.
-publish() {
-  local version=$1 revision=$2 context=$3 dockerfile=$4
-  shift 4
-  local content_key=${BUILD_CONTENT_KEY:-$revision}
-  local immutable="${version}-sha${content_key:0:12}"
-  if ! docker buildx imagetools inspect "$image:$immutable" >/dev/null 2>&1; then
-    docker buildx build --progress=plain --platform linux/amd64 \
-      --label "org.opencontainers.image.source=$source_label" \
-      --label "org.opencontainers.image.url=$source_label" \
-      --label "org.opencontainers.image.revision=$revision" \
-      --file "$dockerfile" --tag "$image:$immutable" \
-      "${BUILD_ARGS[@]}" --push "$context"
-  else
-    echo "$image:$immutable already exists; skipping build."
-  fi
-  if [[ "$DISTRIBUTION" == Centos ]]; then
-    docker run --rm "$image:$immutable" /bin/bash -c \
-      'grep -qi centos /etc/os-release && command -v yum'
-  fi
-  local alias
-  for alias in "$version" "$@"; do
-    docker buildx imagetools create --tag "$image:$alias" "$image:$immutable"
-  done
-  printf '%s\n' "$image:$immutable" >> "$IMAGE_TEST_LIST"
-  # Each matrix job has its own runner; release build cache between versions.
-  docker buildx prune --all --force
+# Build one discovered release and architecture on this runner.
+run_builder() {
+  docker run --rm --privileged --platform "$PLATFORM" \
+    --mount "type=bind,src=$WORK/source,dst=/source,readonly" \
+    --mount "type=bind,src=$WORK/context,dst=/output" \
+    --mount "type=bind,src=$REPO_ROOT,dst=/build-tools,readonly" \
+    --env "VERSION=$VERSION" --env "SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH" \
+    "$BOOTSTRAP_ID" "$@"
 }
-publish_alias() {
-  local alias=$1 source=$2
-  docker buildx imagetools create --tag "$image:$alias" "$image:$source"
+metadata_hash() { sha256sum | cut -d' ' -f1; }
+package_metadata() { run_builder /bin/sh /build-tools/scripts/package-metadata.sh | metadata_hash; }
+publish_dockerfile() {
+  local dockerfile=$1; shift
+  docker buildx build --progress=plain --platform "$PLATFORM" \
+    --label "org.opencontainers.image.source=$source_label" \
+    --label "org.opencontainers.image.url=$source_label" \
+    --label "org.opencontainers.image.revision=$revision" \
+    --file "$dockerfile" --tag "$reference" "$@" --push context
 }
-
-clone_branch() {
-  local branch=$1 sparse=${2:-}
-  rm -rf source
-  git clone --quiet --depth=1 --filter=blob:none --single-branch \
-    --branch "$branch" --sparse "$mirror" source
-  if [[ -n "$sparse" ]]; then
-    git -C source sparse-checkout set "$sparse"
-  else
-    git -C source sparse-checkout disable
-  fi
+publish_rootfs() {
+  local archive=$1 command=${2:-/bin/bash}
+  test -s "context/$archive"
+  printf 'FROM scratch\nADD %s /\nCMD ["%s"]\n' "$archive" "$command" > context/Dockerfile
+  publish_dockerfile context/Dockerfile
 }
-
-branches() {
-  git ls-remote --heads "$mirror" | sed 's#.*refs/heads/##'
+publish_oci() {
+  local archive=$1
+  sudo apt-get update -qq
+  sudo apt-get install -y -qq skopeo
+  skopeo copy "oci-archive:$archive" "oci:$WORK/oci:base"
+  python3 "$REPO_ROOT/scripts/label-oci.py" "$WORK/oci" "$source_label" "$revision"
+  skopeo copy --authfile "$HOME/.docker/config.json" "oci:$WORK/oci:base" "docker://$reference"
 }

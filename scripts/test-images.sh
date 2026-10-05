@@ -21,7 +21,7 @@ expected_source="https://github.com/Low-Price-Hosting/$distribution"
 while IFS= read -r reference; do
   echo "Smoke testing $reference"
   docker buildx imagetools inspect "$reference" >/dev/null
-  docker run --rm --platform linux/amd64 --entrypoint /bin/sh "$reference" -ec '
+  docker run --rm --platform "${IMAGE_PLATFORM:?}" --entrypoint /bin/sh "$reference" -ec '
     . /etc/os-release
     test "$ID" = "$1"
     case "$ID" in
@@ -33,7 +33,9 @@ while IFS= read -r reference; do
     esac
     printf "%s %s\n" "$ID" "${VERSION_ID:-rolling}"
   ' smoke "$expected_id"
-  [[ "$(docker image inspect --format '{{.Architecture}}' "$reference")" == amd64 ]]
+  architecture=${IMAGE_PLATFORM#linux/}
+  architecture=${architecture%%/*}
+  [[ "$(docker image inspect --format '{{.Architecture}}' "$reference")" == "$architecture" ]]
   [[ "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.source" }}' "$reference")" == "$expected_source" ]]
   docker image rm --force "$reference" >/dev/null
 done < "$references"
