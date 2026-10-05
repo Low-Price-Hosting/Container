@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
-dnf -y install python3 python3-pykickstart tar gzip
+if [[ -f /source/config.xml ]]; then
+  dnf -y install rocky-release-core
+  dnf -y install kiwi-cli kiwi-systemdeps-containers kiwi-systemdeps-core distribution-gpg-keys
+  mkdir /recipe
+  cp -a /source/. /recipe/
+  cd /recipe
+  export TERM=xterm
+  ./container-build.sh --container Base --output-dir /output/result
+  exit 0
+fi
+dnf -y install python3 pykickstart tar gzip
 recipe="/source/container/rocky-container-base.ks"
 [[ -f "$recipe" ]] || recipe="/source/Rocky-$VERSION-Container-Base.ks"
 python3 /build-tools/scripts/kickstart-rootfs.py "$recipe" "$VERSION" /output/rootfs

@@ -8,7 +8,8 @@ apt-get install -y --no-install-recommends live-build debootstrap germinate \
   jq sudo wget rsync attr gettext xz-utils grep-dctrl uuid-runtime
 mkdir /recipe /work
 cp -a /source/. /recipe/
-export LIVECD_ROOTFS_ROOT=/recipe
+ln -s /recipe /usr/share/livecd-rootfs
+export LIVECD_ROOTFS_ROOT=/usr/share/livecd-rootfs
 export PROJECT=ubuntu-oci SUBPROJECT=minimized IMAGEFORMAT=plain
 export ARCH=$(dpkg --print-architecture)
 SUITE=$( . /etc/os-release; echo "$VERSION_CODENAME" )
