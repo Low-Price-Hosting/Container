@@ -2,7 +2,7 @@
 set -euo pipefail
 if [[ -f /source/config.xml ]]; then
   dnf -y install rocky-release-core
-  dnf -y install kiwi-cli kiwi-systemdeps-containers kiwi-systemdeps-core distribution-gpg-keys
+  dnf -y --enablerepo='*core*' install kiwi-cli kiwi-systemdeps-containers kiwi-systemdeps-core
   mkdir /recipe
   cp -a /source/. /recipe/
   cd /recipe

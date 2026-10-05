@@ -53,6 +53,7 @@ jobs:
           path: build-plan.json
 
   build:
+    name: ${{ matrix.distribution }} ${{ matrix.version }} (${{ matrix.platform }})
     needs: discover
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 330

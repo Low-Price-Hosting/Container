@@ -4,7 +4,8 @@ run_builder() {
   docker run --rm --privileged --platform "$PLATFORM" \
     --mount "type=bind,src=$WORK/source,dst=/source,readonly" \
     --mount "type=bind,src=$WORK/context,dst=/output" \
-    --mount "type=bind,src=$REPO_ROOT,dst=/build-tools,readonly" \
+    --mount "type=bind,src=$REPO_ROOT/scripts,dst=/build-tools/scripts,readonly" \
+    --mount "type=bind,src=$REPO_ROOT/$lower,dst=/build-tools/$lower,readonly" \
     --env "VERSION=$VERSION" --env "SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH" \
     "$BOOTSTRAP_ID" "$@"
 }
