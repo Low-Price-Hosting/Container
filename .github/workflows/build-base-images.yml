@@ -27,7 +27,7 @@ permissions:
   packages: write
 
 concurrency:
-  group: base-images-${{ inputs.architecture || 'all' }}
+  group: base-images-${{ inputs.architecture || 'all' }}-${{ inputs.verify_only && inputs.distribution || 'publish' }}
   cancel-in-progress: false
 
 jobs:
