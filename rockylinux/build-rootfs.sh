@@ -15,6 +15,8 @@ if [[ -f /source/config.xml ]]; then
   python3 /build-tools/rockylinux/prepare-description.py /recipe/config.xml
   cd /recipe
   export TERM=xterm
+  # KIWI 11 uses buildah inside Docker; nested overlayfs needs the VFS driver.
+  export STORAGE_DRIVER=vfs
   ./container-build.sh --container Base --output-dir /output/result
   exit 0
 fi
