@@ -23,7 +23,7 @@ permissions:
   packages: write
 
 concurrency:
-  group: base-images
+  group: base-images-${{ inputs.architecture || 'all' }}
   cancel-in-progress: false
 
 jobs:
@@ -83,6 +83,8 @@ jobs:
 
   publish:
     needs: [discover, build]
+    # A filtered manual build must not replace a complete multi-arch release.
+    if: inputs.architecture != 'amd64' && inputs.architecture != 'arm64'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
