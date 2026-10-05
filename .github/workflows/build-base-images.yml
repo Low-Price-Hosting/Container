@@ -72,13 +72,13 @@ jobs:
         with:
           platforms: all
       - uses: docker/setup-buildx-action@v3
-      - name: Authenticate using a supported token with package write access
+      - name: Log in to GHCR with organization GH_TOKEN
         if: inputs.verify_only != true
-        env:
-          GHCR_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GHCR_ORGANIZATION_TOKEN: ${{ secrets.GH_TOKEN }}
-          DISTRIBUTION: ${{ matrix.distribution }}
-        run: python3 scripts/registry-login.py "$DISTRIBUTION"
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GH_TOKEN }}
       - name: Build ${{ matrix.distribution }} ${{ matrix.version }} ${{ matrix.platform }} from production code
         env:
           BUILD_TARGET: ${{ toJSON(matrix) }}
@@ -111,10 +111,11 @@ jobs:
         with:
           pattern: image-*
           path: results
-      - name: Authenticate for the release packages
-        env:
-          GHCR_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GHCR_ORGANIZATION_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: python3 scripts/registry-login.py --plan plan/build-plan.json
+      - name: Log in to GHCR with organization GH_TOKEN
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GH_TOKEN }}
       - name: Publish tested release manifests
         run: python3 scripts/publish-manifests.py plan/build-plan.json results
