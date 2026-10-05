@@ -64,7 +64,7 @@ def targets(distribution, source, branches):
     return releases
 
 
-def discover(selected='all', architecture='all'):
+def discover(selected='all', architecture='all', version='all'):
     result = []
     with tempfile.TemporaryDirectory(prefix='container-discovery-') as temp:
         for distribution in DISTRIBUTIONS:
@@ -80,6 +80,8 @@ def discover(selected='all', architecture='all'):
             refs = command('git', 'ls-remote', '--heads', mirror).splitlines()
             branches = {line.split('refs/heads/', 1)[1] for line in refs}
             for release in targets(distribution, source, branches):
+                if version != 'all' and release['version'] != version:
+                    continue
                 if release['branch'] not in branches:
                     raise RuntimeError(f"Missing source branch: {distribution}/{release['branch']}")
                 # No architecture is inferred from another distribution's image.
@@ -101,5 +103,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--distribution', choices=('all', *DISTRIBUTIONS), default='all')
     parser.add_argument('--architecture', default='all')
+    parser.add_argument('--version', default='all')
     args = parser.parse_args()
-    print(json.dumps(discover(args.distribution, args.architecture), separators=(',', ':')))
+    print(json.dumps(discover(args.distribution, args.architecture, args.version), separators=(',', ':')))

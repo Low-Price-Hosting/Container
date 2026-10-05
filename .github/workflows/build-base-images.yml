@@ -17,6 +17,10 @@ on:
         required: true
         default: all
         options: [all, amd64, arm64]
+      version:
+        description: Release to build, or all
+        type: string
+        default: all
       verify_only:
         description: Build and run tests without publishing
         type: boolean
@@ -43,9 +47,10 @@ jobs:
         env:
           SELECTED: ${{ inputs.distribution || github.event.client_payload.distribution || 'all' }}
           ARCHITECTURE: ${{ inputs.architecture || 'all' }}
+          VERSION: ${{ inputs.version || 'all' }}
         run: |
           set -euo pipefail
-          python3 scripts/discover-builds.py --distribution "$SELECTED" --architecture "$ARCHITECTURE" > build-plan.json
+          python3 scripts/discover-builds.py --distribution "$SELECTED" --architecture "$ARCHITECTURE" --version "$VERSION" > build-plan.json
           echo "matrix=$(cat build-plan.json)" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
         with:
