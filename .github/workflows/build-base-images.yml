@@ -17,6 +17,10 @@ on:
         required: true
         default: all
         options: [all, amd64, arm64]
+      verify_only:
+        description: Build and run tests without publishing
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -70,11 +74,13 @@ jobs:
       - name: Build ${{ matrix.distribution }} ${{ matrix.version }} ${{ matrix.platform }} from production code
         env:
           BUILD_TARGET: ${{ toJSON(matrix) }}
+          VERIFY_ONLY: ${{ inputs.verify_only || false }}
         run: bash build-base.sh
       - name: Test published image
         env:
           DISTRIBUTION: ${{ matrix.distribution }}
           IMAGE_PLATFORM: ${{ matrix.platform }}
+          LOCAL_ONLY: ${{ inputs.verify_only || false }}
         run: bash scripts/test-images.sh "$DISTRIBUTION" "$RUNNER_TEMP/image-test-list.txt"
       - uses: actions/upload-artifact@v4
         with:
@@ -84,7 +90,7 @@ jobs:
   publish:
     needs: [discover, build]
     # A filtered manual build must not replace a complete multi-arch release.
-    if: inputs.architecture != 'amd64' && inputs.architecture != 'arm64'
+    if: !inputs.verify_only && inputs.architecture != 'amd64' && inputs.architecture != 'arm64'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4

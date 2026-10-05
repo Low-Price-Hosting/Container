@@ -32,7 +32,7 @@ content_key=$({ printf '%s\n' "$revision" "$BOOTSTRAP_ID" "$PLATFORM" "$metadata
 platform_tag=$(tr '/' '-' <<< "$PLATFORM")
 immutable="$VERSION-$platform_tag-sha${content_key:0:16}"
 reference="$image:$immutable"
-if docker buildx imagetools inspect "$reference" >/dev/null 2>&1; then
+if [[ "${VERIFY_ONLY:-false}" != true ]] && docker buildx imagetools inspect "$reference" >/dev/null 2>&1; then
   echo "$reference already exists."
 else
   build_image

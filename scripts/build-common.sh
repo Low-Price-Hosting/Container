@@ -12,11 +12,13 @@ metadata_hash() { sha256sum | cut -d' ' -f1; }
 package_metadata() { run_builder /bin/sh /build-tools/scripts/package-metadata.sh | metadata_hash; }
 publish_dockerfile() {
   local dockerfile=$1; shift
+  local output=--push
+  [[ "${VERIFY_ONLY:-false}" != true ]] || output=--load
   docker buildx build --progress=plain --platform "$PLATFORM" \
     --label "org.opencontainers.image.source=$source_label" \
     --label "org.opencontainers.image.url=$source_label" \
     --label "org.opencontainers.image.revision=$revision" \
-    --file "$dockerfile" --tag "$reference" "$@" --push context
+    --file "$dockerfile" --tag "$reference" "$@" "$output" context
 }
 publish_rootfs() {
   local archive=$1 command=${2:-/bin/bash}
@@ -30,5 +32,9 @@ publish_oci() {
   sudo apt-get install -y -qq skopeo
   skopeo copy "oci-archive:$archive" "oci:$WORK/oci:base"
   python3 "$REPO_ROOT/scripts/label-oci.py" "$WORK/oci" "$source_label" "$revision"
-  skopeo copy --authfile "$HOME/.docker/config.json" "oci:$WORK/oci:base" "docker://$reference"
+  if [[ "${VERIFY_ONLY:-false}" == true ]]; then
+    skopeo copy "oci:$WORK/oci:base" "docker-daemon:$reference"
+  else
+    skopeo copy --authfile "$HOME/.docker/config.json" "oci:$WORK/oci:base" "docker://$reference"
+  fi
 }
