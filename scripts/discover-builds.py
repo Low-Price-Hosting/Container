@@ -15,7 +15,6 @@ REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 spec = importlib.util.spec_from_file_location('repository_metadata', REPO_ROOT / 'scripts/repository-metadata.py')
 metadata = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(metadata)
-INPUT_ANNOTATION = 'io.low-price-hosting.build.inputs'
 
 DISTRIBUTIONS = ('Ubuntu', 'Debian', 'Centos', 'Alpine', 'Fedora', 'AlmaLinux', 'ArchLinux', 'RockyLinux')
 SUPPORTED_ARCHES = {'amd64', 'arm64', '386', 'arm', 'ppc64le', 's390x', 'riscv64'}
@@ -78,14 +77,14 @@ def implementation_hash(distribution):
 
 
 def tested_record(target):
-    reference = 'ghcr.io/low-price-hosting/' + target['distribution'].lower() + ':tested-' + target['key']
+    # The full input hash is part of the tag: Docker manifest lists discard OCI annotations.
+    reference = ('ghcr.io/low-price-hosting/' + target['distribution'].lower()
+                 + ':tested-' + target['key'] + '-sha' + target['fingerprint'])
     inspect = subprocess.run(['docker', 'buildx', 'imagetools', 'inspect', '--format', '{{json .}}', reference],
                              text=True, capture_output=True)
     if inspect.returncode:
         return None
     manifest = json.loads(inspect.stdout)['manifest']
-    if manifest.get('annotations', {}).get(INPUT_ANNOTATION) != target['fingerprint']:
-        return None
     platforms_found = set()
     for item in manifest.get('manifests', []):
         p = item.get('platform', {})
@@ -104,6 +103,12 @@ def release_published(targets):
     images = sorted(target['reused']['image'] for target in targets)
     digest = hashlib.sha256('\n'.join(images).encode()).hexdigest()[:16]
     repository = 'ghcr.io/low-price-hosting/' + targets[0]['distribution'].lower()
+    expected = subprocess.run(['docker', 'buildx', 'imagetools', 'inspect', '--format', '{{json .Manifest}}',
+                               repository + ':' + targets[0]['version'] + '-build' + digest],
+                              text=True, capture_output=True)
+    if expected.returncode:
+        return False
+    expected_digest = json.loads(expected.stdout)['digest']
     tags = {targets[0]['version'], *(alias for target in targets for alias in target['aliases'])}
     for tag in sorted(tags):
         inspect = subprocess.run(['docker', 'buildx', 'imagetools', 'inspect', '--format', '{{json .Manifest}}',
@@ -111,7 +116,7 @@ def release_published(targets):
         if inspect.returncode:
             return False
         manifest = json.loads(inspect.stdout)
-        if manifest.get('annotations', {}).get('io.low-price-hosting.release.inputs') != digest:
+        if manifest['digest'] != expected_digest:
             return False
     return True
 

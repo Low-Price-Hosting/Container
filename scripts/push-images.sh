@@ -7,7 +7,14 @@ reference=$(jq -er .image "$record")
 key=$(jq -er .key "$record")
 fingerprint=$(jq -er .fingerprint "$record")
 platform=$(jq -er .platform "$record")
-docker push "$reference"
+for attempt in 1 2 3; do
+  if docker push "$reference"; then
+    break
+  fi
+  ((attempt < 3)) || exit 1
+  echo "GHCR push failed; retrying ($attempt/3)" >&2
+  sleep $((attempt * 5))
+done
 
 # Keep platform variants (arm/v6, arm/v7, amd64/v2) in the tested index.
 # A Docker daemon's single-image push may omit the variant descriptor.
@@ -21,7 +28,7 @@ jq -e --arg platform "$platform" '
   select(.digest and .mediaType and .size) |
   {digest,mediaType,size,platform:$wanted}
 ' "$RUNNER_TEMP/pushed-manifest.json" > "$RUNNER_TEMP/tested-descriptor.json"
-marker="${reference%%:*}:tested-$key"
+marker="${reference%%:*}:tested-$key-sha$fingerprint"
 docker buildx imagetools create --annotation "index:io.low-price-hosting.build.inputs=$fingerprint" \
   --file "$RUNNER_TEMP/tested-descriptor.json" --tag "$marker"
 digest=$(docker buildx imagetools inspect "$marker" --format '{{.Manifest.Digest}}')
