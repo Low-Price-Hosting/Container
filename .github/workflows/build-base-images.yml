@@ -41,13 +41,6 @@ jobs:
       matrix: ${{ steps.targets.outputs.matrix }}
     steps:
       - uses: actions/checkout@v4
-      - name: Check GH_TOKEN_CLASSIC package upload access before building
-        if: inputs.verify_only != true
-        timeout-minutes: 5
-        env:
-          GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
-          SELECTED: ${{ inputs.distribution || github.event.client_payload.distribution || 'all' }}
-        run: python3 scripts/check-ghcr-access.py "$SELECTED"
       - uses: docker/setup-buildx-action@v3
       - name: Discover releases and architectures from org source repositories
         id: targets
@@ -95,7 +88,6 @@ jobs:
         env:
           DISTRIBUTION: ${{ matrix.distribution }}
           IMAGE_PLATFORM: ${{ matrix.platform }}
-          LOCAL_ONLY: ${{ inputs.verify_only || false }}
         run: bash scripts/test-images.sh "$DISTRIBUTION" "$RUNNER_TEMP/image-test-list.txt"
       - uses: actions/upload-artifact@v4
         with:

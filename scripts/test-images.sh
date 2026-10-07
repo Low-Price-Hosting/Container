@@ -20,9 +20,6 @@ esac
 expected_source="https://github.com/Low-Price-Hosting/$distribution"
 while IFS= read -r reference; do
   echo "Smoke testing $reference"
-  if [[ "${LOCAL_ONLY:-false}" != true ]]; then
-    docker buildx imagetools inspect "$reference" >/dev/null
-  fi
   docker run --rm --platform "${IMAGE_PLATFORM:?}" --entrypoint /bin/sh "$reference" -ec '
     . /etc/os-release
     test "$ID" = "$1"
