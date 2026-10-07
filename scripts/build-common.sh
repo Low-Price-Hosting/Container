@@ -12,10 +12,12 @@ run_builder() {
 }
 build_dockerfile() {
   local dockerfile=$1; shift
+  local label labels=()
+  while IFS= read -r label; do
+    labels+=(--label "$label")
+  done < <(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$IMAGE_LABELS")
   docker buildx build --progress=plain --platform "$PLATFORM" \
-    --label "org.opencontainers.image.source=$source_label" \
-    --label "org.opencontainers.image.url=$source_label" \
-    --label "org.opencontainers.image.revision=$revision" \
+    "${labels[@]}" \
     --file "$dockerfile" --tag "$reference" "$@" --load context
 }
 build_rootfs() {
@@ -29,6 +31,6 @@ load_oci() {
   sudo apt-get update -qq
   sudo apt-get install -y -qq skopeo
   skopeo copy "oci-archive:$archive" "oci:$WORK/oci:base"
-  python3 "$REPO_ROOT/scripts/label-oci.py" "$WORK/oci" "$source_label" "$revision"
+  python3 "$REPO_ROOT/scripts/label-oci.py" "$WORK/oci" "$IMAGE_LABELS"
   skopeo copy "oci:$WORK/oci:base" "docker-daemon:$reference"
 }

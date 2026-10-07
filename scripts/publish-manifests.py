@@ -52,6 +52,18 @@ def publish(plan, directory, validate_only=False):
             args = ['docker', 'buildx', 'imagetools', 'create',
                     '--annotation', 'index:io.low-price-hosting.release.inputs=' + digest,
                     '--tag', f'{repository}:{version}-build{digest}']
+            source = 'https://github.com/Low-Price-Hosting/' + distribution
+            annotations = {
+                'org.opencontainers.image.source': source,
+                'org.opencontainers.image.url': source,
+                'org.opencontainers.image.title': distribution + ' ' + version,
+                'org.opencontainers.image.description': 'Base container image built from Low-Price-Hosting/' + distribution + ' recipes.',
+                'org.opencontainers.image.version': version,
+                'org.opencontainers.image.vendor': 'Low-Price-Hosting',
+                'io.low-price-hosting.build.source': 'https://github.com/Low-Price-Hosting/Container',
+            }
+            for key, value in annotations.items():
+                args += ['--annotation', 'index:' + key + '=' + value]
             for tag in tags:
                 args += ['--tag', repository + ':' + tag]
             subprocess.run([*args, *images], check=True)

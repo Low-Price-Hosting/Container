@@ -10,9 +10,11 @@ import sys
 
 def record(path):
     target = json.loads(os.environ['BUILD_TARGET'])
-    stages = {name: os.environ.get(name.upper() + '_RESULT') or 'skipped' for name in ('build', 'test', 'push')}
-    path.write_text(json.dumps(dict(key=target['key'], **stages,
-                                    cache=os.environ.get('CACHE_HIT') == 'true')))
+    stages = {name: os.environ[name.upper() + '_RESULT'] or 'skipped'
+              for name in ('build', 'test', 'push') if name.upper() + '_RESULT' in os.environ}
+    if 'CACHE_HIT' in os.environ:
+        stages['cache'] = os.environ['CACHE_HIT'] == 'true'
+    path.write_text(json.dumps(dict(key=target['key'], **stages)))
 
 
 def cell(value):
@@ -23,9 +25,11 @@ def report(plan, directory):
     records = {}
     for path in directory.rglob('status.json'):
         item = json.loads(path.read_text())
-        if item['key'] in records:
+        result = records.setdefault(item['key'], {})
+        stages = {name: value for name, value in item.items() if name != 'key'}
+        if result.keys() & stages.keys():
             raise RuntimeError(f"Duplicate stage result: {item['key']}")
-        records[item['key']] = item
+        result.update(stages)
     publications = {}
     failures = list(plan.get('errors', []))
     for path in directory.rglob('publication.json'):
@@ -52,9 +56,10 @@ def report(plan, directory):
                 values = ('Reused', 'Previously passed', 'Current', '—')
             elif target['key'] in records:
                 result = records[target['key']]
-                values = (result['build'], result['test'], result['push'], 'Restored' if result['cache'] else 'Miss')
-                if (result['build'] != 'success' or result['test'] != 'success'
-                        or (not plan.get('verify_only') and result['push'] != 'success')):
+                values = (*(result.get(stage, 'skipped') for stage in ('build', 'test', 'push')),
+                          'Restored' if result.get('cache') else 'Miss')
+                if (result.get('build') != 'success' or result.get('test') != 'success'
+                        or (not plan.get('verify_only') and result.get('push') != 'success')):
                     failures.append(dict(distribution=target['distribution'], version=target['version'],
                                          error='Incomplete build/test/push: ' + target['platform']))
             else:

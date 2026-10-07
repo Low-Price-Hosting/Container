@@ -38,7 +38,7 @@ while IFS= read -r reference; do
   [[ "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.source" }}' "$reference")" == "$expected_source" ]]
 done < "$references"
 
-# Keep the local image for the subsequent Push step.
+# The Publish job uses this result to approve the original build artifact.
 record="$RUNNER_TEMP/image.json"
 jq '.tested=true' "$record" > "$record.tmp"
 mv "$record.tmp" "$record"

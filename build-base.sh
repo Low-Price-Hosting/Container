@@ -26,6 +26,23 @@ git -C source checkout --quiet --detach FETCH_HEAD
 jq -e --arg distro "$DISTRIBUTION" '.schema == 1 and .distribution == $distro' source/.container-source.json >/dev/null
 revision=$(jq -er .revision source/.container-source.json)
 SOURCE_DATE_EPOCH=$(git -C source show -s --format=%ct HEAD)
+IMAGE_LABELS="$WORK/image-labels.json"
+jq -n --arg distribution "$DISTRIBUTION" --arg version "$VERSION" --arg source "$source_label" \
+  --arg revision "$revision" --arg source_commit "$source_commit" \
+  --arg build_revision "${GITHUB_SHA:-}" --arg platform "$PLATFORM" '
+  {
+    "org.opencontainers.image.source": $source,
+    "org.opencontainers.image.url": $source,
+    "org.opencontainers.image.title": ($distribution + " " + $version),
+    "org.opencontainers.image.description": ("Base container image built from Low-Price-Hosting/" + $distribution + " recipes."),
+    "org.opencontainers.image.version": $version,
+    "org.opencontainers.image.revision": $revision,
+    "org.opencontainers.image.vendor": "Low-Price-Hosting",
+    "io.low-price-hosting.source.commit": $source_commit,
+    "io.low-price-hosting.build.source": "https://github.com/Low-Price-Hosting/Container",
+    "io.low-price-hosting.platform": $platform
+  } + (if $build_revision == "" then {} else {"io.low-price-hosting.build.revision": $build_revision} end)
+' > "$IMAGE_LABELS"
 mkdir context
 source "$REPO_ROOT/scripts/build-common.sh"
 # The official image supplies build tools, not the final root filesystem.

@@ -1,12 +1,16 @@
-# Generated from organization release catalogs by scripts/generate-release-workflow.py.
 name: Build base images
-run-name: "Build: ${{ inputs.distribution || github.event.client_payload.distribution || 'all' }} ${{ inputs.version || 'versions' }}${{ inputs.verify_only && ' (verify)' || '' }}"
+run-name: "${{ inputs.operation == 'delete-packages' && 'Delete packages:' || 'Build:' }} ${{ inputs.distribution || github.event.client_payload.distribution || 'all' }} ${{ inputs.version || 'versions' }}${{ inputs.verify_only && ' (verify)' || '' }}"
 
 on:
   repository_dispatch:
     types: [source-mirrors-updated]
   workflow_dispatch:
     inputs:
+      operation:
+        description: Build images, or delete all existing distribution images
+        type: choice
+        default: build
+        options: [build, delete-packages]
       distribution:
         type: choice
         required: true
@@ -31,12 +35,26 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  reset_packages:
+    name: Delete distribution images
+    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'delete-packages'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Delete and verify distribution images
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN_CLASSIC }}
+        run: python3 scripts/manage-packages.py reset
+
   discover:
     name: Discover
+    if: inputs.operation != 'delete-packages'
     runs-on: ubuntu-24.04
     outputs:
-      groups: ${{ steps.plan.outputs.groups }}
-      active-groups: ${{ steps.plan.outputs.active-groups }}
+      targets: ${{ steps.plan.outputs.targets }}
+      has-builds: ${{ steps.plan.outputs.has-builds }}
+      releases: ${{ steps.plan.outputs.releases }}
+      has-releases: ${{ steps.plan.outputs.has-releases }}
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
@@ -62,311 +80,202 @@ jobs:
           name: build-plan
           path: build-plan.json
 
-# release-group-capacity: {"AlmaLinux":3,"Alpine":4,"ArchLinux":1,"Centos":2,"Debian":2,"Fedora":2,"RockyLinux":3,"Ubuntu":3}
-  Build_Group_01:
-    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['1'].name || 'Group 1 (idle)' }}
+  build:
+    name: "Build: ${{ matrix.distribution }} ${{ matrix.version }} · ${{ matrix.architecture }}"
     needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '1')
-    uses: ./.github/workflows/build-release.yml
-    with:
-      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['1'].distribution }}
-      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['1'].version }}
-      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['1'].key }}
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['1'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['1'].has_changes }}
-      verify-only: ${{ inputs.verify_only || false }}
-    secrets:
-      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
+    if: needs.discover.outputs.has-builds == 'true'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix: ${{ fromJSON(needs.discover.outputs.targets || '{"include":[]}') }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Restore package downloads
+        id: packages
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ runner.temp }}/package-cache
+          key: packages-v1-${{ matrix.key }}-${{ matrix.fingerprint }}
+          restore-keys: packages-v1-${{ matrix.key }}-
+      - uses: docker/setup-qemu-action@v4
+        if: matrix.emulation != ''
+        with:
+          platforms: ${{ matrix.emulation }}
+      - uses: docker/setup-buildx-action@v4
+      - name: Build ${{ matrix.architecture }}
+        id: compile
+        env:
+          BUILD_TARGET: ${{ toJSON(matrix) }}
+          PACKAGE_CACHE: ${{ runner.temp }}/package-cache
+        run: |
+          mkdir -p "$PACKAGE_CACHE"
+          bash build-base.sh
+      - name: Export built image for Test and Publish
+        id: archive
+        run: bash scripts/image-artifact.sh save "$RUNNER_TEMP/built"
+      - name: Transfer built image
+        uses: actions/upload-artifact@v7
+        with:
+          name: built-${{ matrix.key }}
+          path: ${{ runner.temp }}/built
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+      - name: Record build result
+        if: always()
+        env:
+          BUILD_TARGET: ${{ toJSON(matrix) }}
+          BUILD_RESULT: ${{ steps.compile.outcome == 'success' && steps.archive.outcome == 'success' && 'success' || 'failure' }}
+          CACHE_HIT: ${{ steps.packages.outputs.cache-matched-key != '' }}
+        run: python3 scripts/summarize-builds.py record "$RUNNER_TEMP/status.json"
+      - name: Save build result
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: status-build-${{ matrix.key }}
+          path: ${{ runner.temp }}/status.json
+          retention-days: 7
+          if-no-files-found: error
+      - name: Keep package download cache bounded
+        if: always()
+        env:
+          PACKAGE_CACHE: ${{ runner.temp }}/package-cache
+        run: |
+          mkdir -p "$PACKAGE_CACHE"
+          sudo chown -R "$(id -u):$(id -g)" "$PACKAGE_CACHE"
+          bash scripts/package-cache.sh --prune
+      - name: Save package downloads
+        if: always() && steps.packages.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ runner.temp }}/package-cache
+          key: ${{ steps.packages.outputs.cache-primary-key }}
 
-  Build_Group_02:
-    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['2'].name || 'Group 2 (idle)' }}
-    needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '2')
-    uses: ./.github/workflows/build-release.yml
-    with:
-      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['2'].distribution }}
-      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['2'].version }}
-      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['2'].key }}
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['2'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['2'].has_changes }}
-      verify-only: ${{ inputs.verify_only || false }}
-    secrets:
-      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
+  test:
+    name: "Test: ${{ matrix.distribution }} ${{ matrix.version }} · ${{ matrix.architecture }}"
+    needs: [discover, build]
+    if: always() && !cancelled() && needs.discover.result == 'success' && needs.discover.outputs.has-builds == 'true'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 16
+      matrix: ${{ fromJSON(needs.discover.outputs.targets || '{"include":[]}') }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-qemu-action@v4
+        if: matrix.emulation != ''
+        with:
+          platforms: ${{ matrix.emulation }}
+      - name: Download built image
+        uses: actions/download-artifact@v8
+        with:
+          name: built-${{ matrix.key }}
+          path: ${{ runner.temp }}/built
+      - name: Load the verified build artifact
+        run: bash scripts/image-artifact.sh restore "$RUNNER_TEMP/built"
+      - name: Test ${{ matrix.architecture }}
+        id: test
+        env:
+          DISTRIBUTION: ${{ matrix.distribution }}
+          IMAGE_PLATFORM: ${{ matrix.platform }}
+        run: bash scripts/test-images.sh "$DISTRIBUTION" "$RUNNER_TEMP/image-test-list.txt"
+      - name: Save tested image approval
+        uses: actions/upload-artifact@v7
+        with:
+          name: image-${{ matrix.key }}
+          path: ${{ runner.temp }}/image.json
+          retention-days: 7
+          if-no-files-found: error
+      - name: Record test result
+        if: always()
+        env:
+          BUILD_TARGET: ${{ toJSON(matrix) }}
+          TEST_RESULT: ${{ steps.test.outcome }}
+        run: python3 scripts/summarize-builds.py record "$RUNNER_TEMP/status.json"
+      - name: Save test result
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: status-test-${{ matrix.key }}
+          path: ${{ runner.temp }}/status.json
+          retention-days: 7
+          if-no-files-found: error
 
-  Build_Group_03:
-    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['3'].name || 'Group 3 (idle)' }}
-    needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '3')
-    uses: ./.github/workflows/build-release.yml
-    with:
-      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['3'].distribution }}
-      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['3'].version }}
-      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['3'].key }}
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['3'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['3'].has_changes }}
-      verify-only: ${{ inputs.verify_only || false }}
-    secrets:
-      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
-
-  Build_Group_04:
-    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['4'].name || 'Group 4 (idle)' }}
-    needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '4')
-    uses: ./.github/workflows/build-release.yml
-    with:
-      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['4'].distribution }}
-      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['4'].version }}
-      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['4'].key }}
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['4'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['4'].has_changes }}
-      verify-only: ${{ inputs.verify_only || false }}
-    secrets:
-      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
-
-  Build_Group_05:
-    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['5'].name || 'Group 5 (idle)' }}
-    needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '5')
-    uses: ./.github/workflows/build-release.yml
-    with:
-      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['5'].distribution }}
-      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['5'].version }}
-      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['5'].key }}
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['5'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['5'].has_changes }}
-      verify-only: ${{ inputs.verify_only || false }}
-    secrets:
-      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
-
-  Build_Group_06:
-    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['6'].name || 'Group 6 (idle)' }}
-    needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '6')
-    uses: ./.github/workflows/build-release.yml
-    with:
-      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['6'].distribution }}
-      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['6'].version }}
-      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['6'].key }}
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['6'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['6'].has_changes }}
-      verify-only: ${{ inputs.verify_only || false }}
-    secrets:
-      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
-
-  Build_Group_07:
-    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['7'].name || 'Group 7 (idle)' }}
-    needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '7')
-    uses: ./.github/workflows/build-release.yml
-    with:
-      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['7'].distribution }}
-      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['7'].version }}
-      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['7'].key }}
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['7'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['7'].has_changes }}
-      verify-only: ${{ inputs.verify_only || false }}
-    secrets:
-      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
-
-  Build_Group_08:
-    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['8'].name || 'Group 8 (idle)' }}
-    needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '8')
-    uses: ./.github/workflows/build-release.yml
-    with:
-      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['8'].distribution }}
-      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['8'].version }}
-      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['8'].key }}
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['8'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['8'].has_changes }}
-      verify-only: ${{ inputs.verify_only || false }}
-    secrets:
-      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
-
-  Build_Group_09:
-    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['9'].name || 'Group 9 (idle)' }}
-    needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '9')
-    uses: ./.github/workflows/build-release.yml
-    with:
-      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['9'].distribution }}
-      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['9'].version }}
-      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['9'].key }}
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['9'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['9'].has_changes }}
-      verify-only: ${{ inputs.verify_only || false }}
-    secrets:
-      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
-
-  Build_Group_10:
-    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['10'].name || 'Group 10 (idle)' }}
-    needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '10')
-    uses: ./.github/workflows/build-release.yml
-    with:
-      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['10'].distribution }}
-      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['10'].version }}
-      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['10'].key }}
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['10'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['10'].has_changes }}
-      verify-only: ${{ inputs.verify_only || false }}
-    secrets:
-      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
-
-  Build_Group_11:
-    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['11'].name || 'Group 11 (idle)' }}
-    needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '11')
-    uses: ./.github/workflows/build-release.yml
-    with:
-      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['11'].distribution }}
-      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['11'].version }}
-      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['11'].key }}
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['11'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['11'].has_changes }}
-      verify-only: ${{ inputs.verify_only || false }}
-    secrets:
-      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
-
-  Build_Group_12:
-    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['12'].name || 'Group 12 (idle)' }}
-    needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '12')
-    uses: ./.github/workflows/build-release.yml
-    with:
-      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['12'].distribution }}
-      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['12'].version }}
-      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['12'].key }}
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['12'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['12'].has_changes }}
-      verify-only: ${{ inputs.verify_only || false }}
-    secrets:
-      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
-
-  Build_Group_13:
-    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['13'].name || 'Group 13 (idle)' }}
-    needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '13')
-    uses: ./.github/workflows/build-release.yml
-    with:
-      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['13'].distribution }}
-      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['13'].version }}
-      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['13'].key }}
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['13'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['13'].has_changes }}
-      verify-only: ${{ inputs.verify_only || false }}
-    secrets:
-      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
-
-  Build_Group_14:
-    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['14'].name || 'Group 14 (idle)' }}
-    needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '14')
-    uses: ./.github/workflows/build-release.yml
-    with:
-      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['14'].distribution }}
-      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['14'].version }}
-      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['14'].key }}
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['14'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['14'].has_changes }}
-      verify-only: ${{ inputs.verify_only || false }}
-    secrets:
-      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
-
-  Build_Group_15:
-    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['15'].name || 'Group 15 (idle)' }}
-    needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '15')
-    uses: ./.github/workflows/build-release.yml
-    with:
-      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['15'].distribution }}
-      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['15'].version }}
-      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['15'].key }}
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['15'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['15'].has_changes }}
-      verify-only: ${{ inputs.verify_only || false }}
-    secrets:
-      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
-
-  Build_Group_16:
-    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['16'].name || 'Group 16 (idle)' }}
-    needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '16')
-    uses: ./.github/workflows/build-release.yml
-    with:
-      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['16'].distribution }}
-      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['16'].version }}
-      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['16'].key }}
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['16'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['16'].has_changes }}
-      verify-only: ${{ inputs.verify_only || false }}
-    secrets:
-      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
-
-  Build_Group_17:
-    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['17'].name || 'Group 17 (idle)' }}
-    needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '17')
-    uses: ./.github/workflows/build-release.yml
-    with:
-      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['17'].distribution }}
-      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['17'].version }}
-      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['17'].key }}
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['17'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['17'].has_changes }}
-      verify-only: ${{ inputs.verify_only || false }}
-    secrets:
-      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
-
-  Build_Group_18:
-    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['18'].name || 'Group 18 (idle)' }}
-    needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '18')
-    uses: ./.github/workflows/build-release.yml
-    with:
-      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['18'].distribution }}
-      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['18'].version }}
-      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['18'].key }}
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['18'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['18'].has_changes }}
-      verify-only: ${{ inputs.verify_only || false }}
-    secrets:
-      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
-
-  Build_Group_19:
-    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['19'].name || 'Group 19 (idle)' }}
-    needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '19')
-    uses: ./.github/workflows/build-release.yml
-    with:
-      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['19'].distribution }}
-      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['19'].version }}
-      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['19'].key }}
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['19'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['19'].has_changes }}
-      verify-only: ${{ inputs.verify_only || false }}
-    secrets:
-      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
-
-  Build_Group_20:
-    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['20'].name || 'Group 20 (idle)' }}
-    needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '20')
-    uses: ./.github/workflows/build-release.yml
-    with:
-      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['20'].distribution }}
-      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['20'].version }}
-      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['20'].key }}
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['20'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['20'].has_changes }}
-      verify-only: ${{ inputs.verify_only || false }}
-    secrets:
-      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
-
+  publish:
+    name: "Publish: ${{ matrix.distribution }} ${{ matrix.version }}"
+    needs: [discover, test]
+    if: always() && !cancelled() && needs.discover.result == 'success' && needs.discover.outputs.has-releases == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix: ${{ fromJSON(needs.discover.outputs.releases || '{"include":[]}') }}
+    env:
+      DISTRIBUTION: ${{ matrix.distribution }}
+      VERSION: ${{ matrix.version }}
+      RELEASE_KEY: ${{ matrix.key }}
+      HAS_CHANGES: ${{ matrix.has_changes }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+        if: inputs.verify_only != true
+      - uses: actions/download-artifact@v8
+        with:
+          name: build-plan
+          path: plan
+      - name: Download this release's test approvals
+        if: env.HAS_CHANGES == 'true'
+        uses: actions/download-artifact@v8
+        with:
+          pattern: image-${{ env.RELEASE_KEY }}-*
+          path: results
+      - name: Log in to GHCR
+        if: inputs.verify_only != true
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GH_TOKEN_CLASSIC }}
+      - name: Publish only when every architecture passed
+        id: publication
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN_CLASSIC }}
+          VERIFY_ONLY: ${{ inputs.verify_only || false }}
+          PUBLICATION_RESULT: ${{ runner.temp }}/publication.json
+        run: |
+          mkdir -p results
+          arguments=()
+          [[ "$VERIFY_ONLY" != true ]] || arguments+=(--validate-only)
+          python3 scripts/publish-release.py plan/build-plan.json results --distribution "$DISTRIBUTION" --version "$VERSION" "${arguments[@]}"
+      - name: Remove superseded generated package versions
+        if: inputs.verify_only != true && steps.publication.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN_CLASSIC }}
+        run: python3 scripts/manage-packages.py prune plan/build-plan.json results --distribution "$DISTRIBUTION" --version "$VERSION" --publication "$RUNNER_TEMP/publication.json"
+      - name: Save push results
+        if: always() && inputs.verify_only != true
+        uses: actions/upload-artifact@v7
+        with:
+          name: status-push-${{ env.RELEASE_KEY }}
+          path: ${{ runner.temp }}/push-status
+          retention-days: 7
+          if-no-files-found: ignore
+      - name: Save publication result
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: publication-${{ env.RELEASE_KEY }}
+          path: ${{ runner.temp }}/publication.json
+          retention-days: 7
+          if-no-files-found: error
 
   summary:
     name: Results
-    needs: [discover, Build_Group_01, Build_Group_02, Build_Group_03, Build_Group_04, Build_Group_05, Build_Group_06, Build_Group_07, Build_Group_08, Build_Group_09, Build_Group_10, Build_Group_11, Build_Group_12, Build_Group_13, Build_Group_14, Build_Group_15, Build_Group_16, Build_Group_17, Build_Group_18, Build_Group_19, Build_Group_20]
+    needs: [discover, publish]
     if: always() && !cancelled() && needs.discover.result == 'success'
     runs-on: ubuntu-24.04
     steps:

@@ -6,7 +6,7 @@ import pathlib
 import sys
 
 
-def label(layout, source, revision):
+def label(layout, metadata):
     blobs = layout / 'blobs/sha256'
 
     def read(descriptor):
@@ -27,13 +27,11 @@ def label(layout, source, revision):
         manifest = read(descriptor)
         config = read(manifest['config'])
         labels = config.setdefault('config', {}).setdefault('Labels', {})
-        labels.update({'org.opencontainers.image.source': source,
-                       'org.opencontainers.image.url': source,
-                       'org.opencontainers.image.revision': revision})
+        labels.update(metadata)
         replace(manifest['config'], config)
         replace(descriptor, manifest)
     index_path.write_text(json.dumps(index, separators=(',', ':')))
 
 
 if __name__ == '__main__':
-    label(pathlib.Path(sys.argv[1]), sys.argv[2], sys.argv[3])
+    label(pathlib.Path(sys.argv[1]), json.loads(pathlib.Path(sys.argv[2]).read_text()))
