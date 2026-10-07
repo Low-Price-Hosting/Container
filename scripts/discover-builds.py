@@ -246,16 +246,12 @@ def discover(selected='all', version='all', verify_only=False):
 
 
 def workflow_outputs(plan):
-    """Pass the discovered targets to matrices in this same workflow run."""
-    matrix = {'include': sorted(plan['matrix']['include'],
-                               key=lambda t: (t['architecture'], t['distribution'], t['version']))}
-    releases = {'include': [{key: release[key] for key in ('distribution', 'version', 'key')}
-                            for release in plan['releases']['include'] if release['version'] != 'sources']}
+    """Pass each release's targets to its own graph group in this run."""
+    groups = {release['key']: release for release in plan['releases']['include'] if release['version'] != 'sources'}
     output = os.environ.get('GITHUB_OUTPUT')
     if output:
         with open(output, 'a') as stream:
-            for name, value in (('matrix', matrix), ('releases', releases),
-                                ('build-count', len(matrix['include'])), ('release-count', len(releases['include']))):
+            for name, value in (('groups', groups), ('active-groups', list(groups))):
                 stream.write(f'{name}={json.dumps(value, separators=(",", ":"))}\n')
 
 
