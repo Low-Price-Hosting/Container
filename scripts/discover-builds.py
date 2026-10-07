@@ -247,7 +247,15 @@ def discover(selected='all', version='all', verify_only=False):
 
 def workflow_outputs(plan):
     """Pass each release's targets to its own graph group in this run."""
-    groups = {release['key']: release for release in plan['releases']['include'] if release['version'] != 'sources'}
+    releases = [r for r in plan['releases']['include'] if r['version'] != 'sources']
+    groups = {str(i): dict(release, name=release['distribution'] + ' ' + release['version'])
+              for i, release in enumerate(releases, 1)}
+    workflow = REPO_ROOT / '.github/workflows/build-base-images.yml'
+    for line in workflow.read_text(encoding='utf-8').splitlines():
+        if line.startswith('# release-group-capacity: '):
+            capacity = sum(json.loads(line.split(': ', 1)[1]).values())
+            if len(groups) > capacity:
+                raise RuntimeError('New releases exceed graph capacity; Cron refreshes the generic groups before its next build notification')
     output = os.environ.get('GITHUB_OUTPUT')
     if output:
         with open(output, 'a') as stream:

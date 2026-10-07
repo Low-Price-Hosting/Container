@@ -62,322 +62,303 @@ jobs:
           name: build-plan
           path: build-plan.json
 
-  # release-group: {"distribution":"AlmaLinux","version":"10"}
-  Build_AlmaLinux_10:
-    name: AlmaLinux 10
+# release-group-capacity: {"AlmaLinux":3,"Alpine":4,"ArchLinux":1,"Centos":2,"Debian":2,"Fedora":2,"RockyLinux":3,"Ubuntu":3}
+  Build_Group_01:
+    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['1'].name || 'Group 1 (idle)' }}
     needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups), 'almalinux-10')
+    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '1')
     uses: ./.github/workflows/build-release.yml
     with:
-      distribution: "AlmaLinux"
-      version: "10"
-      release-key: "almalinux-10"
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups)['almalinux-10'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups)['almalinux-10'].has_changes }}
+      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['1'].distribution }}
+      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['1'].version }}
+      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['1'].key }}
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['1'].targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['1'].has_changes }}
       verify-only: ${{ inputs.verify_only || false }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
-  # release-group: {"distribution":"AlmaLinux","version":"8"}
-  Build_AlmaLinux_8:
-    name: AlmaLinux 8
+  Build_Group_02:
+    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['2'].name || 'Group 2 (idle)' }}
     needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups), 'almalinux-8')
+    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '2')
     uses: ./.github/workflows/build-release.yml
     with:
-      distribution: "AlmaLinux"
-      version: "8"
-      release-key: "almalinux-8"
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups)['almalinux-8'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups)['almalinux-8'].has_changes }}
+      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['2'].distribution }}
+      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['2'].version }}
+      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['2'].key }}
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['2'].targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['2'].has_changes }}
       verify-only: ${{ inputs.verify_only || false }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
-  # release-group: {"distribution":"AlmaLinux","version":"9"}
-  Build_AlmaLinux_9:
-    name: AlmaLinux 9
+  Build_Group_03:
+    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['3'].name || 'Group 3 (idle)' }}
     needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups), 'almalinux-9')
+    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '3')
     uses: ./.github/workflows/build-release.yml
     with:
-      distribution: "AlmaLinux"
-      version: "9"
-      release-key: "almalinux-9"
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups)['almalinux-9'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups)['almalinux-9'].has_changes }}
+      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['3'].distribution }}
+      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['3'].version }}
+      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['3'].key }}
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['3'].targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['3'].has_changes }}
       verify-only: ${{ inputs.verify_only || false }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
-  # release-group: {"distribution":"Alpine","version":"3.21"}
-  Build_Alpine_3_21:
-    name: Alpine 3.21
+  Build_Group_04:
+    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['4'].name || 'Group 4 (idle)' }}
     needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups), 'alpine-3.21')
+    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '4')
     uses: ./.github/workflows/build-release.yml
     with:
-      distribution: "Alpine"
-      version: "3.21"
-      release-key: "alpine-3.21"
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups)['alpine-3.21'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups)['alpine-3.21'].has_changes }}
+      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['4'].distribution }}
+      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['4'].version }}
+      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['4'].key }}
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['4'].targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['4'].has_changes }}
       verify-only: ${{ inputs.verify_only || false }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
-  # release-group: {"distribution":"Alpine","version":"3.22"}
-  Build_Alpine_3_22:
-    name: Alpine 3.22
+  Build_Group_05:
+    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['5'].name || 'Group 5 (idle)' }}
     needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups), 'alpine-3.22')
+    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '5')
     uses: ./.github/workflows/build-release.yml
     with:
-      distribution: "Alpine"
-      version: "3.22"
-      release-key: "alpine-3.22"
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups)['alpine-3.22'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups)['alpine-3.22'].has_changes }}
+      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['5'].distribution }}
+      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['5'].version }}
+      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['5'].key }}
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['5'].targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['5'].has_changes }}
       verify-only: ${{ inputs.verify_only || false }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
-  # release-group: {"distribution":"Alpine","version":"3.23"}
-  Build_Alpine_3_23:
-    name: Alpine 3.23
+  Build_Group_06:
+    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['6'].name || 'Group 6 (idle)' }}
     needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups), 'alpine-3.23')
+    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '6')
     uses: ./.github/workflows/build-release.yml
     with:
-      distribution: "Alpine"
-      version: "3.23"
-      release-key: "alpine-3.23"
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups)['alpine-3.23'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups)['alpine-3.23'].has_changes }}
+      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['6'].distribution }}
+      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['6'].version }}
+      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['6'].key }}
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['6'].targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['6'].has_changes }}
       verify-only: ${{ inputs.verify_only || false }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
-  # release-group: {"distribution":"Alpine","version":"3.24"}
-  Build_Alpine_3_24:
-    name: Alpine 3.24
+  Build_Group_07:
+    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['7'].name || 'Group 7 (idle)' }}
     needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups), 'alpine-3.24')
+    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '7')
     uses: ./.github/workflows/build-release.yml
     with:
-      distribution: "Alpine"
-      version: "3.24"
-      release-key: "alpine-3.24"
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups)['alpine-3.24'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups)['alpine-3.24'].has_changes }}
+      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['7'].distribution }}
+      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['7'].version }}
+      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['7'].key }}
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['7'].targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['7'].has_changes }}
       verify-only: ${{ inputs.verify_only || false }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
-  # release-group: {"distribution":"ArchLinux","version":"rolling"}
-  Build_ArchLinux_rolling:
-    name: ArchLinux rolling
+  Build_Group_08:
+    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['8'].name || 'Group 8 (idle)' }}
     needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups), 'archlinux-rolling')
+    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '8')
     uses: ./.github/workflows/build-release.yml
     with:
-      distribution: "ArchLinux"
-      version: "rolling"
-      release-key: "archlinux-rolling"
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups)['archlinux-rolling'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups)['archlinux-rolling'].has_changes }}
+      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['8'].distribution }}
+      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['8'].version }}
+      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['8'].key }}
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['8'].targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['8'].has_changes }}
       verify-only: ${{ inputs.verify_only || false }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
-  # release-group: {"distribution":"Centos","version":"stream10"}
-  Build_Centos_stream10:
-    name: Centos stream10
+  Build_Group_09:
+    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['9'].name || 'Group 9 (idle)' }}
     needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups), 'centos-stream10')
+    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '9')
     uses: ./.github/workflows/build-release.yml
     with:
-      distribution: "Centos"
-      version: "stream10"
-      release-key: "centos-stream10"
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups)['centos-stream10'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups)['centos-stream10'].has_changes }}
+      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['9'].distribution }}
+      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['9'].version }}
+      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['9'].key }}
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['9'].targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['9'].has_changes }}
       verify-only: ${{ inputs.verify_only || false }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
-  # release-group: {"distribution":"Centos","version":"stream9"}
-  Build_Centos_stream9:
-    name: Centos stream9
+  Build_Group_10:
+    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['10'].name || 'Group 10 (idle)' }}
     needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups), 'centos-stream9')
+    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '10')
     uses: ./.github/workflows/build-release.yml
     with:
-      distribution: "Centos"
-      version: "stream9"
-      release-key: "centos-stream9"
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups)['centos-stream9'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups)['centos-stream9'].has_changes }}
+      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['10'].distribution }}
+      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['10'].version }}
+      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['10'].key }}
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['10'].targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['10'].has_changes }}
       verify-only: ${{ inputs.verify_only || false }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
-  # release-group: {"distribution":"Debian","version":"bookworm"}
-  Build_Debian_bookworm:
-    name: Debian bookworm
+  Build_Group_11:
+    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['11'].name || 'Group 11 (idle)' }}
     needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups), 'debian-bookworm')
+    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '11')
     uses: ./.github/workflows/build-release.yml
     with:
-      distribution: "Debian"
-      version: "bookworm"
-      release-key: "debian-bookworm"
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups)['debian-bookworm'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups)['debian-bookworm'].has_changes }}
+      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['11'].distribution }}
+      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['11'].version }}
+      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['11'].key }}
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['11'].targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['11'].has_changes }}
       verify-only: ${{ inputs.verify_only || false }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
-  # release-group: {"distribution":"Debian","version":"trixie"}
-  Build_Debian_trixie:
-    name: Debian trixie
+  Build_Group_12:
+    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['12'].name || 'Group 12 (idle)' }}
     needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups), 'debian-trixie')
+    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '12')
     uses: ./.github/workflows/build-release.yml
     with:
-      distribution: "Debian"
-      version: "trixie"
-      release-key: "debian-trixie"
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups)['debian-trixie'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups)['debian-trixie'].has_changes }}
+      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['12'].distribution }}
+      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['12'].version }}
+      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['12'].key }}
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['12'].targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['12'].has_changes }}
       verify-only: ${{ inputs.verify_only || false }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
-  # release-group: {"distribution":"Fedora","version":"43"}
-  Build_Fedora_43:
-    name: Fedora 43
+  Build_Group_13:
+    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['13'].name || 'Group 13 (idle)' }}
     needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups), 'fedora-43')
+    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '13')
     uses: ./.github/workflows/build-release.yml
     with:
-      distribution: "Fedora"
-      version: "43"
-      release-key: "fedora-43"
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups)['fedora-43'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups)['fedora-43'].has_changes }}
+      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['13'].distribution }}
+      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['13'].version }}
+      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['13'].key }}
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['13'].targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['13'].has_changes }}
       verify-only: ${{ inputs.verify_only || false }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
-  # release-group: {"distribution":"Fedora","version":"44"}
-  Build_Fedora_44:
-    name: Fedora 44
+  Build_Group_14:
+    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['14'].name || 'Group 14 (idle)' }}
     needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups), 'fedora-44')
+    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '14')
     uses: ./.github/workflows/build-release.yml
     with:
-      distribution: "Fedora"
-      version: "44"
-      release-key: "fedora-44"
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups)['fedora-44'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups)['fedora-44'].has_changes }}
+      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['14'].distribution }}
+      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['14'].version }}
+      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['14'].key }}
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['14'].targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['14'].has_changes }}
       verify-only: ${{ inputs.verify_only || false }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
-  # release-group: {"distribution":"RockyLinux","version":"10"}
-  Build_RockyLinux_10:
-    name: RockyLinux 10
+  Build_Group_15:
+    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['15'].name || 'Group 15 (idle)' }}
     needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups), 'rockylinux-10')
+    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '15')
     uses: ./.github/workflows/build-release.yml
     with:
-      distribution: "RockyLinux"
-      version: "10"
-      release-key: "rockylinux-10"
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups)['rockylinux-10'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups)['rockylinux-10'].has_changes }}
+      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['15'].distribution }}
+      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['15'].version }}
+      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['15'].key }}
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['15'].targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['15'].has_changes }}
       verify-only: ${{ inputs.verify_only || false }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
-  # release-group: {"distribution":"RockyLinux","version":"8"}
-  Build_RockyLinux_8:
-    name: RockyLinux 8
+  Build_Group_16:
+    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['16'].name || 'Group 16 (idle)' }}
     needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups), 'rockylinux-8')
+    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '16')
     uses: ./.github/workflows/build-release.yml
     with:
-      distribution: "RockyLinux"
-      version: "8"
-      release-key: "rockylinux-8"
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups)['rockylinux-8'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups)['rockylinux-8'].has_changes }}
+      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['16'].distribution }}
+      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['16'].version }}
+      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['16'].key }}
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['16'].targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['16'].has_changes }}
       verify-only: ${{ inputs.verify_only || false }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
-  # release-group: {"distribution":"RockyLinux","version":"9"}
-  Build_RockyLinux_9:
-    name: RockyLinux 9
+  Build_Group_17:
+    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['17'].name || 'Group 17 (idle)' }}
     needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups), 'rockylinux-9')
+    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '17')
     uses: ./.github/workflows/build-release.yml
     with:
-      distribution: "RockyLinux"
-      version: "9"
-      release-key: "rockylinux-9"
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups)['rockylinux-9'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups)['rockylinux-9'].has_changes }}
+      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['17'].distribution }}
+      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['17'].version }}
+      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['17'].key }}
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['17'].targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['17'].has_changes }}
       verify-only: ${{ inputs.verify_only || false }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
-  # release-group: {"distribution":"Ubuntu","version":"22.04"}
-  Build_Ubuntu_22_04:
-    name: Ubuntu 22.04
+  Build_Group_18:
+    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['18'].name || 'Group 18 (idle)' }}
     needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups), 'ubuntu-22.04')
+    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '18')
     uses: ./.github/workflows/build-release.yml
     with:
-      distribution: "Ubuntu"
-      version: "22.04"
-      release-key: "ubuntu-22.04"
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups)['ubuntu-22.04'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups)['ubuntu-22.04'].has_changes }}
+      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['18'].distribution }}
+      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['18'].version }}
+      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['18'].key }}
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['18'].targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['18'].has_changes }}
       verify-only: ${{ inputs.verify_only || false }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
-  # release-group: {"distribution":"Ubuntu","version":"24.04"}
-  Build_Ubuntu_24_04:
-    name: Ubuntu 24.04
+  Build_Group_19:
+    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['19'].name || 'Group 19 (idle)' }}
     needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups), 'ubuntu-24.04')
+    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '19')
     uses: ./.github/workflows/build-release.yml
     with:
-      distribution: "Ubuntu"
-      version: "24.04"
-      release-key: "ubuntu-24.04"
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups)['ubuntu-24.04'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups)['ubuntu-24.04'].has_changes }}
+      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['19'].distribution }}
+      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['19'].version }}
+      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['19'].key }}
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['19'].targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['19'].has_changes }}
       verify-only: ${{ inputs.verify_only || false }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
-  # release-group: {"distribution":"Ubuntu","version":"26.04"}
-  Build_Ubuntu_26_04:
-    name: Ubuntu 26.04
+  Build_Group_20:
+    name: ${{ fromJSON(needs.discover.outputs.groups || '{}')['20'].name || 'Group 20 (idle)' }}
     needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups), 'ubuntu-26.04')
+    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '20')
     uses: ./.github/workflows/build-release.yml
     with:
-      distribution: "Ubuntu"
-      version: "26.04"
-      release-key: "ubuntu-26.04"
-      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups)['ubuntu-26.04'].targets) }}
-      has-changes: ${{ fromJSON(needs.discover.outputs.groups)['ubuntu-26.04'].has_changes }}
+      distribution: ${{ fromJSON(needs.discover.outputs.groups || '{}')['20'].distribution }}
+      version: ${{ fromJSON(needs.discover.outputs.groups || '{}')['20'].version }}
+      release-key: ${{ fromJSON(needs.discover.outputs.groups || '{}')['20'].key }}
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.groups || '{}')['20'].targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.groups || '{}')['20'].has_changes }}
       verify-only: ${{ inputs.verify_only || false }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
@@ -385,7 +366,7 @@ jobs:
 
   summary:
     name: Results
-    needs: [discover, Build_AlmaLinux_10, Build_AlmaLinux_8, Build_AlmaLinux_9, Build_Alpine_3_21, Build_Alpine_3_22, Build_Alpine_3_23, Build_Alpine_3_24, Build_ArchLinux_rolling, Build_Centos_stream10, Build_Centos_stream9, Build_Debian_bookworm, Build_Debian_trixie, Build_Fedora_43, Build_Fedora_44, Build_RockyLinux_10, Build_RockyLinux_8, Build_RockyLinux_9, Build_Ubuntu_22_04, Build_Ubuntu_24_04, Build_Ubuntu_26_04]
+    needs: [discover, Build_Group_01, Build_Group_02, Build_Group_03, Build_Group_04, Build_Group_05, Build_Group_06, Build_Group_07, Build_Group_08, Build_Group_09, Build_Group_10, Build_Group_11, Build_Group_12, Build_Group_13, Build_Group_14, Build_Group_15, Build_Group_16, Build_Group_17, Build_Group_18, Build_Group_19, Build_Group_20]
     if: always() && !cancelled() && needs.discover.result == 'success'
     runs-on: ubuntu-24.04
     steps:

@@ -3,7 +3,7 @@
 import importlib.util
 import json
 import pathlib
-import re
+import collections
 import sys
 import tempfile
 
@@ -13,17 +13,18 @@ TEMPLATE = ROOT / 'scripts/build-workflow.yml.in'
 spec = importlib.util.spec_from_file_location('discovery', ROOT / 'scripts/discover-builds.py')
 discovery = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(discovery)
-MARKER = '  # release-group: '
-
-
-def job_id(distribution, version):
-    if distribution not in discovery.DISTRIBUTIONS or not re.fullmatch(r'[A-Za-z0-9._-]+', version):
-        raise ValueError(f'Invalid release: {distribution} {version}')
-    return 'Build_' + distribution + '_' + re.sub(r'[^A-Za-z0-9_]', '_', version)
+MARKER = '# release-group-capacity: '
 
 
 def previous_catalog(text):
-    return [json.loads(line[len(MARKER):]) for line in text.splitlines() if line.startswith(MARKER)]
+    for line in text.splitlines():
+        if line.startswith(MARKER):
+            counts = json.loads(line[len(MARKER):])
+            return [dict(distribution=d, version=f'capacity-{i}') for d, count in counts.items()
+                    for i in range(count)]
+    # Read the previous generated format during the migration.
+    legacy = '  # release-group: '
+    return [json.loads(line[len(legacy):]) for line in text.splitlines() if line.startswith(legacy)]
 
 
 def collect_catalog(previous):
@@ -44,24 +45,21 @@ def collect_catalog(previous):
 
 def render(catalog, template):
     catalog = [dict(distribution=d, version=v) for d, v in sorted({(r['distribution'], r['version']) for r in catalog})]
+    counts = dict(sorted(collections.Counter(r['distribution'] for r in catalog).items()))
     jobs, identifiers = [], []
-    for release in catalog:
-        distribution, version = release['distribution'], release['version']
-        identifier = job_id(distribution, version)
-        if identifier in identifiers:
-            raise ValueError(f'Colliding release job: {identifier}')
+    for index in range(1, len(catalog) + 1):
+        identifier = f'Build_Group_{index:02d}'
         identifiers.append(identifier)
-        key = distribution.lower() + '-' + version
-        detail = f"fromJSON(needs.discover.outputs.groups)['{key}']"
-        jobs.append(MARKER + json.dumps(release, separators=(',', ':')) + '\n' + f'''  {identifier}:
-    name: {distribution} {version}
+        detail = f"fromJSON(needs.discover.outputs.groups || '{{}}')['{index}']"
+        jobs.append(f'''  {identifier}:
+    name: ${{{{ {detail}.name || 'Group {index} (idle)' }}}}
     needs: discover
-    if: contains(fromJSON(needs.discover.outputs.active-groups), '{key}')
+    if: contains(fromJSON(needs.discover.outputs.active-groups || '[]'), '{index}')
     uses: ./.github/workflows/build-release.yml
     with:
-      distribution: {json.dumps(distribution)}
-      version: {json.dumps(version)}
-      release-key: {json.dumps(key)}
+      distribution: ${{{{ {detail}.distribution }}}}
+      version: ${{{{ {detail}.version }}}}
+      release-key: ${{{{ {detail}.key }}}}
       targets: ${{{{ toJSON({detail}.targets) }}}}
       has-changes: ${{{{ {detail}.has_changes }}}}
       verify-only: ${{{{ inputs.verify_only || false }}}}
@@ -70,7 +68,8 @@ def render(catalog, template):
 ''')
     if not identifiers:
         raise ValueError('No release groups discovered')
-    return template.replace('__RELEASE_JOBS__', '\n'.join(jobs)).replace('__RELEASE_NEEDS__', ', '.join(identifiers))
+    return template.replace('__RELEASE_JOBS__', MARKER + json.dumps(counts, separators=(',', ':'))
+                            + '\n' + '\n'.join(jobs)).replace('__RELEASE_NEEDS__', ', '.join(identifiers))
 
 
 if __name__ == '__main__':
