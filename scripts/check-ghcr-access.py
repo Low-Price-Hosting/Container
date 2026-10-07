@@ -42,39 +42,39 @@ def check_upload(token, username, repository):
 def check(selected):
     if selected not in ('all', *DISTRIBUTIONS):
         raise RuntimeError('Unknown distribution in registry access check.')
-    token = os.environ.get('GH_TOKEN', '').strip()
+    token = os.environ.get('GH_TOKEN_CLASSIC', '').strip()
     if not token:
-        raise RuntimeError('GH_TOKEN is unavailable. Grant Container access to the organization Actions secret.')
+        raise RuntimeError('GH_TOKEN_CLASSIC is unavailable. Grant Container access to the organization Actions secret.')
     fine_grained = token.startswith('github_pat_')
     token_type = 'fine-grained PAT' if fine_grained else 'classic PAT' if token.startswith('ghp_') else 'other GitHub token'
-    print('GH_TOKEN type: ' + token_type, flush=True)
+    print('GH_TOKEN_CLASSIC type: ' + token_type, flush=True)
     try:
         _, headers, body = request('https://api.github.com/user', 'Bearer ' + token)
     except urllib.error.HTTPError as error:
         if error.code == 401:
-            raise RuntimeError('GH_TOKEN is invalid, expired, or revoked.') from None
+            raise RuntimeError('GH_TOKEN_CLASSIC is invalid, expired, or revoked.') from None
         raise
     username = json.loads(body).get('login', '')
     if not re.fullmatch(r'[A-Za-z0-9-]+', username):
         raise RuntimeError('GitHub did not return a valid token owner.')
-    print('GH_TOKEN owner: ' + username, flush=True)
+    print('GH_TOKEN_CLASSIC owner: ' + username, flush=True)
     if fine_grained:
         raise RuntimeError('GitHub Packages does not support fine-grained PATs, even with all repository permissions. '
-                           'Replace the organization GH_TOKEN secret with a classic PAT granting write:packages: ' + CLASSIC_TOKEN_URL)
+                           'Replace the organization GH_TOKEN_CLASSIC secret with a classic PAT granting write:packages: ' + CLASSIC_TOKEN_URL)
     scopes_header = headers.get('X-OAuth-Scopes')
     if scopes_header is not None:
         scopes = {scope.strip() for scope in scopes_header.split(',')}
         allowed = 'write:packages' in scopes
-        print('GH_TOKEN write:packages scope: ' + ('present' if allowed else 'absent'), flush=True)
+        print('GH_TOKEN_CLASSIC write:packages scope: ' + ('present' if allowed else 'absent'), flush=True)
         if not allowed:
-            raise RuntimeError('GH_TOKEN lacks write:packages. Repository or organization permissions do not grant package upload access. '
-                               'Update the classic PAT stored in the organization GH_TOKEN secret: ' + CLASSIC_TOKEN_URL)
+            raise RuntimeError('GH_TOKEN_CLASSIC lacks write:packages. Repository or organization permissions do not grant package upload access. '
+                               'Update the classic PAT stored in the organization GH_TOKEN_CLASSIC secret: ' + CLASSIC_TOKEN_URL)
     for distribution in DISTRIBUTIONS if selected == 'all' else (selected,):
         repository = 'low-price-hosting/' + distribution.lower()
         try:
             check_upload(token, username, repository)
         except urllib.error.HTTPError as error:
-            raise RuntimeError(f'GH_TOKEN cannot upload to ghcr.io/{repository} (HTTP {error.code}). '
+            raise RuntimeError(f'GH_TOKEN_CLASSIC cannot upload to ghcr.io/{repository} (HTTP {error.code}). '
                                'Check package Write access, organization PAT policy, and SSO authorization if required.') from None
         print('GHCR upload access verified: ' + repository, flush=True)
 
@@ -83,11 +83,11 @@ if __name__ == '__main__':
     try:
         check(sys.argv[1] if len(sys.argv) == 2 else 'all')
     except urllib.error.HTTPError as error:
-        print(f'::error::GitHub rejected the GH_TOKEN check (HTTP {error.code}).', flush=True)
+        print(f'::error::GitHub rejected the GH_TOKEN_CLASSIC check (HTTP {error.code}).', flush=True)
         sys.exit(1)
     except (urllib.error.URLError, TimeoutError, ValueError) as error:
         # Never print credentials, response bodies, URLs containing tokens, or request objects.
-        print('::error::GH_TOKEN access check failed (' + type(error).__name__ + ').', flush=True)
+        print('::error::GH_TOKEN_CLASSIC access check failed (' + type(error).__name__ + ').', flush=True)
         sys.exit(1)
     except RuntimeError as error:
         print('::error::' + str(error), flush=True)

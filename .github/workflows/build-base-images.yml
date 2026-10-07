@@ -41,11 +41,11 @@ jobs:
       matrix: ${{ steps.targets.outputs.matrix }}
     steps:
       - uses: actions/checkout@v4
-      - name: Check GH_TOKEN package upload access before building
+      - name: Check GH_TOKEN_CLASSIC package upload access before building
         if: inputs.verify_only != true
         timeout-minutes: 5
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
           SELECTED: ${{ inputs.distribution || github.event.client_payload.distribution || 'all' }}
         run: python3 scripts/check-ghcr-access.py "$SELECTED"
       - uses: docker/setup-buildx-action@v3
@@ -79,13 +79,13 @@ jobs:
         with:
           platforms: all
       - uses: docker/setup-buildx-action@v3
-      - name: Log in to GHCR with organization GH_TOKEN
+      - name: Log in to GHCR with organization GH_TOKEN_CLASSIC
         if: inputs.verify_only != true
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GH_TOKEN }}
+          password: ${{ secrets.GH_TOKEN_CLASSIC }}
       - name: Build ${{ matrix.distribution }} ${{ matrix.version }} ${{ matrix.platform }} from production code
         env:
           BUILD_TARGET: ${{ toJSON(matrix) }}
@@ -118,11 +118,11 @@ jobs:
         with:
           pattern: image-*
           path: results
-      - name: Log in to GHCR with organization GH_TOKEN
+      - name: Log in to GHCR with organization GH_TOKEN_CLASSIC
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GH_TOKEN }}
+          password: ${{ secrets.GH_TOKEN_CLASSIC }}
       - name: Publish tested release manifests
         run: python3 scripts/publish-manifests.py plan/build-plan.json results
