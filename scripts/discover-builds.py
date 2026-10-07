@@ -2,6 +2,7 @@
 """Discover production targets from the organization's source snapshots."""
 import argparse
 import concurrent.futures
+import functools
 import hashlib
 import importlib.util
 import json
@@ -74,49 +75,120 @@ def implementation_hash(distribution):
     return files_hash(REPO_ROOT, files)
 
 
-def tested_record(target):
-    # The full input hash is part of the tag: Docker manifest lists discard OCI annotations.
-    reference = ('ghcr.io/low-price-hosting/' + target['distribution'].lower()
-                 + ':tested-' + target['key'] + '-sha' + target['fingerprint'])
-    inspect = subprocess.run(['docker', 'buildx', 'imagetools', 'inspect', '--format', '{{json .}}', reference],
-                             text=True, capture_output=True)
+def descriptor_platform(item):
+    platform = item.get('platform', {})
+    architecture = platform.get('architecture')
+    if platform.get('os') != 'linux' or not architecture or architecture == 'unknown':
+        return None
+    variant = platform.get('variant', '')
+    return 'linux/' + architecture + ('/' + variant if variant else '')
+
+
+@functools.lru_cache(maxsize=256)
+def registry_digest(reference):
+    inspect = subprocess.run(['docker', 'buildx', 'imagetools', 'inspect', '--format',
+                              '{{.Manifest.Digest}}', reference], text=True, capture_output=True)
+    digest = inspect.stdout.strip()
+    return digest if not inspect.returncode and re.fullmatch(r'sha256:[a-f0-9]{64}', digest) else None
+
+
+@functools.lru_cache(maxsize=128)
+def published_index(reference):
+    digest = registry_digest(reference)
+    if not digest:
+        return None
+    # Read the immutable digest so a simultaneous alias update cannot mix two indexes.
+    repository = reference.split(':', 1)[0]
+    inspect = subprocess.run(['docker', 'buildx', 'imagetools', 'inspect', '--raw',
+                              repository + '@' + digest], text=True, capture_output=True)
     if inspect.returncode:
         return None
-    manifest = json.loads(inspect.stdout)['manifest']
-    platforms_found = set()
-    for item in manifest.get('manifests', []):
-        p = item.get('platform', {})
-        if p.get('os') == 'linux':
-            variant = p.get('variant', '')
-            if p['architecture'] == 'arm64' and variant == 'v8':
-                variant = ''
-            platforms_found.add('linux/' + p['architecture'] + ('/' + variant if variant else ''))
-    if platforms_found != {target['platform']}:
+    try:
+        index = json.loads(inspect.stdout)
+    except (json.JSONDecodeError, TypeError):
         return None
-    return dict(key=target['key'], platform=target['platform'], fingerprint=target['fingerprint'],
-                tested=True, pushed=True, image=reference.split(':')[0] + '@' + manifest['digest'])
+    if (not isinstance(index, dict) or index.get('schemaVersion') != 2
+            or index.get('mediaType') != 'application/vnd.oci.image.index.v1+json'
+            or not isinstance(index.get('manifests'), list)):
+        return None
+    return digest, index
+
+
+def tested_record(target):
+    repository = 'ghcr.io/low-price-hosting/' + target['distribution'].lower()
+    published = published_index(repository + ':' + target['version'])
+    if not published or not re.fullmatch(r'[a-f0-9]{64}', target.get('fingerprint', '')):
+        return None
+    _, index = published
+    matching = [item for item in index['manifests']
+                if descriptor_platform(item) == target['platform']]
+    # A duplicated architecture or a partial fingerprint is never a tested cache hit.
+    if len(matching) != 1:
+        return None
+    descriptor = matching[0]
+    annotations = descriptor.get('annotations', {})
+    if (annotations.get('io.low-price-hosting.build.inputs') != target['fingerprint']
+            or annotations.get('io.low-price-hosting.tested') != 'true'
+            or not re.fullmatch(r'sha256:[a-f0-9]{64}', descriptor.get('digest', ''))
+            or descriptor.get('mediaType') not in ('application/vnd.oci.image.manifest.v1+json',
+                                                   'application/vnd.docker.distribution.manifest.v2+json')
+            or not isinstance(descriptor.get('size'), int) or descriptor['size'] <= 0):
+        return None
+    record = dict(key=target['key'], platform=target['platform'], fingerprint=target['fingerprint'],
+                  tested=True, pushed=True, image=repository + '@' + descriptor['digest'],
+                  descriptor=descriptor)
+    if annotations.get('io.low-price-hosting.os.version'):
+        record['os_version'] = annotations['io.low-price-hosting.os.version']
+    return record
 
 
 def release_published(targets):
-    images = sorted(target['reused']['image'] for target in targets)
-    digest = hashlib.sha256('\n'.join(images).encode()).hexdigest()[:16]
-    repository = 'ghcr.io/low-price-hosting/' + targets[0]['distribution'].lower()
-    expected = subprocess.run(['docker', 'buildx', 'imagetools', 'inspect', '--format', '{{json .Manifest}}',
-                               repository + ':' + targets[0]['version'] + '-build' + digest],
-                              text=True, capture_output=True)
-    if expected.returncode:
+    if not targets or any(not target.get('reused') for target in targets):
         return False
-    expected_digest = json.loads(expected.stdout)['digest']
-    tags = {targets[0]['version'], *(alias for target in targets for alias in target['aliases'])}
-    for tag in sorted(tags):
-        inspect = subprocess.run(['docker', 'buildx', 'imagetools', 'inspect', '--format', '{{json .Manifest}}',
-                                  repository + ':' + tag], text=True, capture_output=True)
-        if inspect.returncode:
+    images = sorted(target['reused']['image'] for target in targets)
+    inputs = hashlib.sha256('\n'.join(images).encode()).hexdigest()
+    repository = 'ghcr.io/low-price-hosting/' + targets[0]['distribution'].lower()
+    version = targets[0]['version']
+    published = published_index(repository + ':' + version)
+    if not published:
+        return False
+    expected_digest, index = published
+    annotations = index.get('annotations', {})
+    expected_metadata = {
+        'io.low-price-hosting.release.schema': '2',
+        'io.low-price-hosting.release.inputs': inputs,
+        'org.opencontainers.image.source': 'https://github.com/Low-Price-Hosting/' + targets[0]['distribution'],
+        'org.opencontainers.image.title': targets[0]['distribution'] + ' ' + version,
+        'org.opencontainers.image.version': version,
+        'io.low-price-hosting.build.source': 'https://github.com/Low-Price-Hosting/Container',
+    }
+    if (any(annotations.get(key) != value for key, value in expected_metadata.items())
+            or not isinstance(annotations.get('org.opencontainers.image.description'), str)
+            or not annotations['org.opencontainers.image.description'].strip()):
+        return False
+    wanted = {target['platform']: target for target in targets}
+    descriptors = index['manifests']
+    if len(wanted) != len(targets) or len(descriptors) != len(wanted):
+        return False
+    found = set()
+    for descriptor in descriptors:
+        platform = descriptor_platform(descriptor)
+        if platform not in wanted or platform in found:
             return False
-        manifest = json.loads(inspect.stdout)
-        if manifest['digest'] != expected_digest:
+        found.add(platform)
+        target = wanted[platform]
+        metadata = descriptor.get('annotations', {})
+        if (metadata.get('io.low-price-hosting.build.inputs') != target['fingerprint']
+                or metadata.get('io.low-price-hosting.tested') != 'true'
+                or repository + '@' + descriptor.get('digest', '') != target['reused']['image']):
             return False
-    return True
+    tags = {version, *(alias for target in targets for alias in target['aliases'])}
+    os_versions = {target['reused'].get('os_version') for target in targets}
+    if len(os_versions) == 1:
+        os_version = os_versions.pop()
+        if os_version and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]*', os_version):
+            tags.add(os_version)
+    return all(registry_digest(repository + ':' + tag) == expected_digest for tag in sorted(tags))
 
 
 def release_matrix(plan, verify_only=False):

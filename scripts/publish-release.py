@@ -48,7 +48,6 @@ def publish_release(plan, results, distribution, version, validate_only=False):
                 continue
             key = target['key']
             status = dict(key=key, push='failure')
-            reference = None
             try:
                 if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]*', key):
                     raise ValueError(f'Invalid image artifact key: {key}')
@@ -56,7 +55,6 @@ def publish_release(plan, results, distribution, version, validate_only=False):
                 tested = json.loads(tested_path.read_text())
                 if tested.get('pushed') is not False:
                     raise ValueError(f'Image must be tested and awaiting publication: {key}')
-                reference = tested['image']
                 with tempfile.TemporaryDirectory(prefix='release-image-', dir=runner_temp) as directory:
                     artifact = pathlib.Path(directory)
                     subprocess.run(['gh', 'run', 'download', os.environ['GITHUB_RUN_ID'],
@@ -68,9 +66,8 @@ def publish_release(plan, results, distribution, version, validate_only=False):
                             raise ValueError(f'Built and tested image differ ({field}): {key}')
                     if built.get('tested') is not False or built.get('pushed') is not False:
                         raise ValueError(f'Unexpected state in built image artifact: {key}')
-                    subprocess.run(['bash', str(ROOT / 'image-artifact.sh'), 'restore', str(artifact)], check=True)
                     (runner_temp / 'image.json').write_text(json.dumps(tested), encoding='utf-8')
-                    subprocess.run(['bash', str(ROOT / 'push-images.sh')], check=True)
+                    subprocess.run(['bash', str(ROOT / 'push-images.sh'), str(artifact / 'image.tar.gz')], check=True)
                     pushed = json.loads((runner_temp / 'image.json').read_text())
                     if (pushed.get('tested') is not True or pushed.get('pushed') is not True
                             or not re.search(r'@sha256:[a-f0-9]{64}$', pushed.get('image', ''))
@@ -83,10 +80,6 @@ def publish_release(plan, results, distribution, version, validate_only=False):
                 failed = True
                 print(f'{key}: {error}', file=sys.stderr)
             finally:
-                if reference:
-                    # The push helper removes successful images; this also covers a failed push/load.
-                    subprocess.run(['docker', 'image', 'rm', '--force', reference], check=False,
-                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 if re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]*', key):
                     destination = runner_temp / 'push-status' / key / 'status.json'
                     destination.parent.mkdir(parents=True, exist_ok=True)

@@ -17,7 +17,7 @@ build_dockerfile() {
     labels+=(--label "$label")
   done < <(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$IMAGE_LABELS")
   docker buildx build --progress=plain --platform "$PLATFORM" \
-    "${labels[@]}" \
+    --provenance=false --sbom=false "${labels[@]}" \
     --file "$dockerfile" --tag "$reference" "$@" --load context
 }
 build_rootfs() {
