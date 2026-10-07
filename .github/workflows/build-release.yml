@@ -116,7 +116,7 @@ jobs:
           printf '## %s\n\n| Stage | Result |\n|---|---|\n| Build | %s |\n| Local runtime test | %s |\n| Push | %s |\n| Package cache restored | %s |\n' "$TARGET_NAME" "$BUILD_RESULT" "$TEST_RESULT" "$PUSH_RESULT" "$CACHE_HIT" >> "$GITHUB_STEP_SUMMARY"
 
   publish:
-    name: ${{ inputs.publish-release && !inputs.verify-only && 'Publish release manifest' || 'Check release errors' }}
+    name: Publish
     needs: architecture
     if: always() && !cancelled() && ((inputs.publish-release && !inputs.verify-only) || inputs.has-errors)
     runs-on: ubuntu-24.04
