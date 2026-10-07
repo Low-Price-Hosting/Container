@@ -195,10 +195,6 @@ def source_catalog(distribution, source):
     return branches, targets(distribution, source, branches)
 
 
-def release_job_id(distribution, version):
-    return 'Build_' + distribution + '_' + re.sub(r'[^A-Za-z0-9_]', '_', version)
-
-
 def discover(selected='all', version='all', verify_only=False):
     result = []
     errors = []
@@ -256,13 +252,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     plan = discover(args.distribution, args.version, args.verify_only)
     plan['releases'] = release_matrix(plan, args.verify_only)
-    output = os.environ.get('GITHUB_OUTPUT')
-    if output:
-        with open(output, 'a') as stream:
-            releases = {release_job_id(r['distribution'], r['version']): r
-                        for r in plan['releases']['include'] if r['version'] != 'sources'}
-            stream.write('releases=' + json.dumps(releases, separators=(',', ':')) + '\n')
-            stream.write('has_source_errors=' + str(any('version' not in e for e in plan['errors'])).lower() + '\n')
     summary = os.environ.get('GITHUB_STEP_SUMMARY')
     if summary:
         with open(summary, 'a') as stream:

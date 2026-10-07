@@ -1,7 +1,8 @@
-name: Build, test and publish one release
+name: Build one Linux release
+run-name: "Build: ${{ inputs.distribution }} ${{ inputs.version }}${{ inputs.verify-only && ' (verify)' || '' }}"
 
 on:
-  workflow_call:
+  workflow_dispatch:
     inputs:
       distribution:
         required: true
@@ -24,13 +25,21 @@ on:
       verify-only:
         type: boolean
         default: false
-    secrets:
-      GH_TOKEN_CLASSIC:
-        required: false
+      plan-run-id:
+        required: true
+        type: string
+      source-ref:
+        required: true
+        type: string
 
 permissions:
   contents: read
+  actions: read
   packages: write
+
+concurrency:
+  group: release-${{ inputs.release-key }}-${{ inputs.verify-only && 'verify' || 'publish' }}
+  cancel-in-progress: false
 
 jobs:
   architecture:
@@ -45,6 +54,8 @@ jobs:
         include: ${{ fromJSON(inputs.targets) }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.source-ref }}
       - name: Restore package downloads
         id: packages
         uses: actions/cache/restore@v5
@@ -119,11 +130,15 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.source-ref }}
       - uses: docker/setup-buildx-action@v4
       - uses: actions/download-artifact@v8
         with:
           name: build-plan
           path: plan
+          run-id: ${{ inputs.plan-run-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/download-artifact@v8
         if: inputs.has-changes
         with:
