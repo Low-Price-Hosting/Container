@@ -1,16 +1,11 @@
 name: Build base images
-run-name: "${{ inputs.operation == 'delete-packages' && 'Delete packages:' || 'Build:' }} ${{ inputs.distribution || github.event.client_payload.distribution || 'all' }} ${{ inputs.version || 'versions' }}${{ inputs.verify_only && ' (verify)' || '' }}"
+run-name: "Build: ${{ inputs.distribution || github.event.client_payload.distribution || 'all' }} ${{ inputs.version || 'versions' }}${{ inputs.verify_only && ' (verify)' || '' }}"
 
 on:
   repository_dispatch:
     types: [source-mirrors-updated]
   workflow_dispatch:
     inputs:
-      operation:
-        description: Build images, or delete all existing distribution images
-        type: choice
-        default: build
-        options: [build, delete-packages]
       distribution:
         type: choice
         required: true
@@ -35,20 +30,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  reset_packages:
-    name: Delete distribution images
-    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'delete-packages'
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v7
-      - name: Delete and verify distribution images
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN_CLASSIC }}
-        run: python3 scripts/manage-packages.py reset
-
   discover:
     name: Discover
-    if: inputs.operation != 'delete-packages'
     runs-on: ubuntu-24.04
     outputs:
       targets: ${{ steps.plan.outputs.targets }}
@@ -251,11 +234,6 @@ jobs:
           arguments=()
           [[ "$VERIFY_ONLY" != true ]] || arguments+=(--validate-only)
           python3 scripts/publish-release.py plan/build-plan.json results --distribution "$DISTRIBUTION" --version "$VERSION" "${arguments[@]}"
-      - name: Remove superseded generated package versions
-        if: inputs.verify_only != true && steps.publication.outcome == 'success'
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN_CLASSIC }}
-        run: python3 scripts/manage-packages.py prune plan/build-plan.json results --distribution "$DISTRIBUTION" --version "$VERSION" --publication "$RUNNER_TEMP/publication.json"
       - name: Save push results
         if: always() && inputs.verify_only != true
         uses: actions/upload-artifact@v7
