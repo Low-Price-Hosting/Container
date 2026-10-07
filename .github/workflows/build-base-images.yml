@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.targets.outputs.matrix }}
-      has_changes: ${{ steps.targets.outputs.has_changes }}
+      has_releases: ${{ steps.targets.outputs.has_releases }}
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
@@ -66,104 +66,23 @@ jobs:
           path: build-plan.json
 
   build:
-    name: ${{ matrix.distribution && format('{0} {1} ({2})', matrix.distribution, matrix.version, matrix.platform) || 'No changed images' }}
+    name: "Build: ${{ matrix.distribution }} ${{ matrix.version }}"
     needs: discover
-    if: needs.discover.outputs.has_changes == 'true'
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 330
+    if: needs.discover.outputs.has_releases == 'true'
     strategy:
       fail-fast: false
-      max-parallel: 8
+      max-parallel: 4
       matrix: ${{ fromJSON(needs.discover.outputs.matrix) }}
-    steps:
-      - uses: actions/checkout@v7
-      - name: Restore package downloads
-        id: packages
-        uses: actions/cache/restore@v5
-        with:
-          path: ${{ runner.temp }}/package-cache
-          key: packages-v1-${{ matrix.key }}-${{ matrix.fingerprint }}
-          restore-keys: packages-v1-${{ matrix.key }}-
-      - uses: docker/setup-qemu-action@v4
-        if: matrix.emulation != ''
-        with:
-          platforms: ${{ matrix.emulation }}
-      - uses: docker/setup-buildx-action@v4
-      - name: Log in to GHCR with organization GH_TOKEN_CLASSIC
-        if: inputs.verify_only != true
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GH_TOKEN_CLASSIC }}
-      - name: Build ${{ matrix.distribution }} ${{ matrix.version }} ${{ matrix.platform }} from production code
-        id: compile
-        env:
-          BUILD_TARGET: ${{ toJSON(matrix) }}
-          VERIFY_ONLY: ${{ inputs.verify_only || false }}
-          PACKAGE_CACHE: ${{ runner.temp }}/package-cache
-        run: |
-          mkdir -p "$PACKAGE_CACHE"
-          bash build-base.sh
-      - name: Test image runtime
-        id: test
-        env:
-          DISTRIBUTION: ${{ matrix.distribution }}
-          IMAGE_PLATFORM: ${{ matrix.platform }}
-          VERIFY_ONLY: ${{ inputs.verify_only || false }}
-        run: bash scripts/test-images.sh "$DISTRIBUTION" "$RUNNER_TEMP/image-test-list.txt"
-      - uses: actions/upload-artifact@v7
-        with:
-          name: image-${{ matrix.key }}
-          path: ${{ runner.temp }}/image.json
-      - name: Keep package download cache bounded
-        if: always()
-        env:
-          PACKAGE_CACHE: ${{ runner.temp }}/package-cache
-        run: |
-          mkdir -p "$PACKAGE_CACHE"
-          sudo chown -R "$(id -u):$(id -g)" "$PACKAGE_CACHE"
-          bash scripts/package-cache.sh --prune
-      - name: Save package downloads
-        if: always() && steps.packages.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v5
-        with:
-          path: ${{ runner.temp }}/package-cache
-          key: ${{ steps.packages.outputs.cache-primary-key }}
-      - name: Build and test summary
-        if: always()
-        env:
-          TARGET_NAME: ${{ matrix.distribution }} ${{ matrix.version }} (${{ matrix.platform }})
-          BUILD_RESULT: ${{ steps.compile.outcome }}
-          TEST_RESULT: ${{ steps.test.outcome }}
-          CACHE_HIT: ${{ steps.packages.outputs.cache-matched-key != '' }}
-        run: |
-          printf '## %s\n\n| Stage | Result |\n|---|---|\n| Build | %s |\n| Runtime test | %s |\n| Package cache restored | %s |\n' "$TARGET_NAME" "$BUILD_RESULT" "$TEST_RESULT" "$CACHE_HIT" >> "$GITHUB_STEP_SUMMARY"
-
-  publish:
-    needs: [discover, build]
-    # A filtered manual build must not replace a complete multi-arch release.
-    if: always() && !cancelled() && needs.discover.result == 'success' && inputs.verify_only != true && inputs.architecture != 'amd64' && inputs.architecture != 'arm64'
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v7
-      - uses: docker/setup-buildx-action@v4
-      - uses: actions/download-artifact@v8
-        with:
-          name: build-plan
-          path: plan
-      - uses: actions/download-artifact@v8
-        if: needs.discover.outputs.has_changes == 'true'
-        with:
-          pattern: image-*
-          path: results
-      - name: Log in to GHCR with organization GH_TOKEN_CLASSIC
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GH_TOKEN_CLASSIC }}
-      - name: Publish tested release manifests
-        run: |
-          mkdir -p results
-          python3 scripts/publish-manifests.py plan/build-plan.json results
+    uses: ./.github/workflows/build-release.yml
+    with:
+      distribution: ${{ matrix.distribution }}
+      version: ${{ matrix.version }}
+      release-key: ${{ matrix.key }}
+      targets: ${{ toJSON(matrix.targets) }}
+      has-changes: ${{ matrix.has_changes }}
+      has-errors: ${{ matrix.has_errors }}
+      verify-only: ${{ inputs.verify_only || false }}
+      # Filtered manual builds must not replace the complete multi-arch tag.
+      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
+    secrets:
+      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}

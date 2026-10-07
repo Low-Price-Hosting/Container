@@ -97,7 +97,43 @@ def tested_record(target):
     if platforms_found != {target['platform']}:
         return None
     return dict(key=target['key'], platform=target['platform'], fingerprint=target['fingerprint'],
-                tested=True, image=reference.split(':')[0] + '@' + manifest['digest'])
+                tested=True, pushed=True, image=reference.split(':')[0] + '@' + manifest['digest'])
+
+
+def release_published(targets):
+    images = sorted(target['reused']['image'] for target in targets)
+    digest = hashlib.sha256('\n'.join(images).encode()).hexdigest()[:16]
+    repository = 'ghcr.io/low-price-hosting/' + targets[0]['distribution'].lower()
+    tags = {targets[0]['version'], *(alias for target in targets for alias in target['aliases'])}
+    for tag in sorted(tags):
+        inspect = subprocess.run(['docker', 'buildx', 'imagetools', 'inspect', '--format', '{{json .Manifest}}',
+                                  repository + ':' + tag], text=True, capture_output=True)
+        if inspect.returncode:
+            return False
+        manifest = json.loads(inspect.stdout)
+        if manifest.get('annotations', {}).get('io.low-price-hosting.release.inputs') != digest:
+            return False
+    return True
+
+
+def release_matrix(plan, verify_only=False, publish_release=True):
+    groups = {}
+    for target in plan['include']:
+        groups.setdefault((target['distribution'], target['version']), []).append(target)
+    for error in plan.get('errors', []):
+        groups.setdefault((error['distribution'], error.get('version', 'sources')), [])
+    releases = []
+    for (distribution, version), targets in sorted(groups.items()):
+        changed = [target for target in targets if not target.get('reused') and not target.get('error')]
+        errors = [error for error in plan.get('errors', []) if error['distribution'] == distribution
+                  and error.get('version', 'sources') == version]
+        has_errors = bool(errors) or any(target.get('error') for target in targets)
+        if (not changed and not has_errors and (verify_only or not publish_release or release_published(targets))):
+            continue
+        releases.append(dict(distribution=distribution, version=version,
+                             key=distribution.lower() + '-' + version, targets=changed,
+                             has_changes=bool(changed), has_errors=has_errors))
+    return {'include': releases}
 
 
 def plan_target(target, source, verify_only):
@@ -214,11 +250,12 @@ if __name__ == '__main__':
     parser.add_argument('--verify-only', action='store_true')
     args = parser.parse_args()
     plan = discover(args.distribution, args.architecture, args.version, args.verify_only)
+    plan['releases'] = release_matrix(plan, args.verify_only, args.architecture == 'all')
     output = os.environ.get('GITHUB_OUTPUT')
     if output:
         with open(output, 'a') as stream:
-            stream.write('matrix=' + json.dumps(plan['matrix'], separators=(',', ':')) + '\n')
-            stream.write('has_changes=' + str(bool(plan['matrix']['include'])).lower() + '\n')
+            stream.write('matrix=' + json.dumps(plan['releases'], separators=(',', ':')) + '\n')
+            stream.write('has_releases=' + str(bool(plan['releases']['include'])).lower() + '\n')
     summary = os.environ.get('GITHUB_STEP_SUMMARY')
     if summary:
         with open(summary, 'a') as stream:

@@ -8,5 +8,5 @@ build_image() {
     *.gz) gzip -dc "${archives[0]}" > context/image.oci.tar ;;
     *) cp "${archives[0]}" context/image.oci.tar ;;
   esac
-  publish_oci context/image.oci.tar
+  load_oci context/image.oci.tar
 }

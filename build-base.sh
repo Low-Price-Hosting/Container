@@ -6,7 +6,6 @@ REPO_ROOT=$(cd -- "$(dirname -- "$0")" && pwd)
 : "${PACKAGE_CACHE:?}"
 DISTRIBUTION=$(jq -er .distribution <<< "$BUILD_TARGET")
 VERSION=$(jq -er .version <<< "$BUILD_TARGET")
-BRANCH=$(jq -er .branch <<< "$BUILD_TARGET")
 BOOTSTRAP=$(jq -er .bootstrap <<< "$BUILD_TARGET")
 PLATFORM=$(jq -er .platform <<< "$BUILD_TARGET")
 KEY=$(jq -er .key <<< "$BUILD_TARGET")
@@ -40,4 +39,4 @@ reference="$image:$immutable"
 build_image
 printf '%s\n' "$reference" > "$IMAGE_TEST_LIST"
 jq -n --arg key "$KEY" --arg platform "$PLATFORM" --arg image "$reference" --arg fingerprint "$content_key" \
-  '{key:$key,platform:$platform,image:$image,fingerprint:$fingerprint,tested:false}' > "$RUNNER_TEMP/image.json"
+  '{key:$key,platform:$platform,image:$image,fingerprint:$fingerprint,tested:false,pushed:false}' > "$RUNNER_TEMP/image.json"
