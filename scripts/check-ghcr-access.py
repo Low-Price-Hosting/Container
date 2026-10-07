@@ -32,9 +32,14 @@ def check_upload(token, username, repository):
     status, headers, _ = request('https://ghcr.io/v2/' + repository + '/blobs/uploads/', authorization, 'POST')
     if status != 202:
         raise RuntimeError('GHCR did not allow a package upload.')
-    location = urllib.parse.urljoin('https://ghcr.io', headers.get('Location', ''))
+    location_header = headers.get('Location')
+    if not location_header:
+        raise RuntimeError('GHCR did not return an upload location.')
+    # Registry upload locations are opaque. Follow the supplied URL on GHCR
+    # instead of assuming a particular upload path or trailing slash.
+    location = urllib.parse.urljoin('https://ghcr.io', location_header)
     parsed = urllib.parse.urlparse(location)
-    if parsed.scheme != 'https' or parsed.netloc != 'ghcr.io' or not parsed.path.startswith('/v2/' + repository + '/blobs/uploads/'):
+    if parsed.scheme != 'https' or parsed.hostname != 'ghcr.io' or parsed.port not in (None, 443) or parsed.username or parsed.password:
         raise RuntimeError('GHCR returned an unexpected upload location.')
     request(location, authorization, 'DELETE')
 
