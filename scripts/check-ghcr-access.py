@@ -41,7 +41,13 @@ def check_upload(token, username, repository):
     parsed = urllib.parse.urlparse(location)
     if parsed.scheme != 'https' or parsed.hostname != 'ghcr.io' or parsed.port not in (None, 443) or parsed.username or parsed.password:
         raise RuntimeError('GHCR returned an unexpected upload location.')
-    request(location, authorization, 'DELETE')
+    try:
+        request(location, authorization, 'DELETE')
+    except urllib.error.HTTPError as error:
+        # GHCR can accept uploads while not implementing cancellation. An
+        # uncommitted empty upload contains no image and publishes no tag.
+        if error.code not in (404, 405):
+            raise
 
 
 def check(selected):
