@@ -75,6 +75,9 @@ def fingerprint(target, source, repo_root):
     variant = target['platform'].split('/')[2:]
     deb = {'386': 'i386', 'arm64': 'arm64', 'arm': 'armhf', 'ppc64le': 'ppc64el'}.get(arch, arch)
     rpm = {'amd64': 'x86_64', 'arm64': 'aarch64', '386': 'i686', 'arm': 'armhfp'}.get(arch, arch)
+    # Upstream AlmaLinux's linux/386 compatibility image contains x86_64 packages.
+    if distro == 'AlmaLinux' and arch == '386':
+        rpm = 'x86_64'
     if distro == 'AlmaLinux' and version == '10' and arch == 'amd64':
         rpm = 'x86_64_v2'
     apk = {'amd64': 'x86_64', 'arm64': 'aarch64', '386': 'x86',

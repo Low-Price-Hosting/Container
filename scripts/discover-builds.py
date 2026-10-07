@@ -67,8 +67,7 @@ def recipe_hash(distribution, version, source):
 
 def implementation_hash(distribution):
     lower = distribution.lower()
-    paths = ['build-base.sh', 'scripts/build-common.sh', 'scripts/package-cache.sh',
-             'scripts/repository-metadata.py', 'scripts/test-images.sh']
+    paths = ['build-base.sh', 'scripts/build-common.sh', 'scripts/package-cache.sh', 'scripts/test-images.sh']
     if distribution in ('Centos', 'RockyLinux'):
         paths.append('scripts/kickstart-rootfs.py')
     if distribution in ('Fedora', 'RockyLinux'):
@@ -225,7 +224,7 @@ if __name__ == '__main__':
         with open(summary, 'a') as stream:
             stream.write('## Build plan\n\n| Distribution / release | Platform | Decision |\n|---|---|---|\n')
             for target in plan['include']:
-                state = 'Failed to check package indexes' if target.get('error') else 'Reuse tested image' if target.get('reused') else 'Build and test'
+                state = ('Failed: ' + target['error'].replace('|', '\\|').replace('\n', ' ')) if target.get('error') else 'Reuse tested image' if target.get('reused') else 'Build and test'
                 stream.write(f"| {target['distribution']} {target['version']} | {target['platform']} | {state} |\n")
             for error in plan['errors']:
                 stream.write(f"\n**{error['distribution']} {error.get('version', '')}:** {error['error']}\n")

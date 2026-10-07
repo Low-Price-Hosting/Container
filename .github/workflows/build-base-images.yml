@@ -66,7 +66,7 @@ jobs:
           path: build-plan.json
 
   build:
-    name: ${{ matrix.distribution }} ${{ matrix.version }} (${{ matrix.platform }})
+    name: ${{ matrix.distribution && format('{0} {1} ({2})', matrix.distribution, matrix.version, matrix.platform) || 'No changed images' }}
     needs: discover
     if: needs.discover.outputs.has_changes == 'true'
     runs-on: ${{ matrix.runner }}
