@@ -5,7 +5,8 @@ apt-get update
 apt-get install -y --no-install-recommends debootstrap debian-archive-keyring \
   ca-certificates wget gnupg gpgv xz-utils jq patch tar tzdata
 export DEBUERREOTYPE_DIRECTORY=/source
-export PATH="/source/scripts:$PATH"
+# Upstream inspects debootstrap itself for required features; use the real program.
+export PATH="/source/scripts:${PACKAGE_ORIGINAL_PATH:-$PATH}"
 mkdir -p /output/debuerreotype
 bash /source/examples/debian.sh --arch "$(dpkg --print-architecture)" /output/debuerreotype "$VERSION" now
 mapfile -t archives < <(find /output/debuerreotype -path "*/$VERSION/rootfs.tar.xz" -type f)
