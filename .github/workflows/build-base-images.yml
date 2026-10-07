@@ -8,11 +8,6 @@ on:
         required: true
         default: all
         options: [all, Ubuntu, Debian, Centos, Alpine, Fedora, AlmaLinux, ArchLinux, RockyLinux]
-      architecture:
-        type: choice
-        required: true
-        default: all
-        options: [all, amd64, arm64]
       version:
         description: Release to build, or all
         type: string
@@ -27,7 +22,7 @@ permissions:
   packages: write
 
 concurrency:
-  group: base-images-${{ inputs.architecture || 'all' }}-${{ inputs.verify_only && format('{0}-{1}', inputs.distribution, inputs.version || 'all') || 'publish' }}
+  group: base-images-${{ inputs.verify_only && format('verify-{0}-{1}', inputs.distribution, inputs.version || 'all') || 'publish' }}
   cancel-in-progress: false
 
 jobs:
@@ -50,14 +45,13 @@ jobs:
         id: targets
         env:
           SELECTED: ${{ inputs.distribution || github.event.client_payload.distribution || 'all' }}
-          ARCHITECTURE: ${{ inputs.architecture || 'all' }}
           VERSION: ${{ inputs.version || 'all' }}
           VERIFY_ONLY: ${{ inputs.verify_only || false }}
         run: |
           set -euo pipefail
           arguments=()
           [[ "$VERIFY_ONLY" != true ]] || arguments+=(--verify-only)
-          python3 scripts/discover-builds.py --distribution "$SELECTED" --architecture "$ARCHITECTURE" --version "$VERSION" "${arguments[@]}" > build-plan.json
+          python3 scripts/discover-builds.py --distribution "$SELECTED" --version "$VERSION" "${arguments[@]}" > build-plan.json
       - uses: actions/upload-artifact@v7
         with:
           name: build-plan
@@ -90,7 +84,6 @@ jobs:
       has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_Ubuntu_26_04.has_changes }}
       has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_Ubuntu_26_04.has_errors }}
       verify-only: ${{ inputs.verify_only || false }}
-      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
@@ -107,7 +100,6 @@ jobs:
       has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_Ubuntu_24_04.has_changes }}
       has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_Ubuntu_24_04.has_errors }}
       verify-only: ${{ inputs.verify_only || false }}
-      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
@@ -124,7 +116,6 @@ jobs:
       has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_Ubuntu_22_04.has_changes }}
       has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_Ubuntu_22_04.has_errors }}
       verify-only: ${{ inputs.verify_only || false }}
-      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
@@ -141,7 +132,6 @@ jobs:
       has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_Debian_trixie.has_changes }}
       has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_Debian_trixie.has_errors }}
       verify-only: ${{ inputs.verify_only || false }}
-      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
@@ -158,7 +148,6 @@ jobs:
       has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_Debian_bookworm.has_changes }}
       has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_Debian_bookworm.has_errors }}
       verify-only: ${{ inputs.verify_only || false }}
-      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
@@ -175,7 +164,6 @@ jobs:
       has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_Centos_stream10.has_changes }}
       has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_Centos_stream10.has_errors }}
       verify-only: ${{ inputs.verify_only || false }}
-      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
@@ -192,7 +180,6 @@ jobs:
       has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_Centos_stream9.has_changes }}
       has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_Centos_stream9.has_errors }}
       verify-only: ${{ inputs.verify_only || false }}
-      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
@@ -209,7 +196,6 @@ jobs:
       has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_Alpine_3_24.has_changes }}
       has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_Alpine_3_24.has_errors }}
       verify-only: ${{ inputs.verify_only || false }}
-      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
@@ -226,7 +212,6 @@ jobs:
       has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_Alpine_3_23.has_changes }}
       has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_Alpine_3_23.has_errors }}
       verify-only: ${{ inputs.verify_only || false }}
-      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
@@ -243,7 +228,6 @@ jobs:
       has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_Alpine_3_22.has_changes }}
       has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_Alpine_3_22.has_errors }}
       verify-only: ${{ inputs.verify_only || false }}
-      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
@@ -260,7 +244,6 @@ jobs:
       has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_Alpine_3_21.has_changes }}
       has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_Alpine_3_21.has_errors }}
       verify-only: ${{ inputs.verify_only || false }}
-      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
@@ -277,7 +260,6 @@ jobs:
       has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_Fedora_44.has_changes }}
       has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_Fedora_44.has_errors }}
       verify-only: ${{ inputs.verify_only || false }}
-      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
@@ -294,7 +276,6 @@ jobs:
       has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_Fedora_43.has_changes }}
       has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_Fedora_43.has_errors }}
       verify-only: ${{ inputs.verify_only || false }}
-      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
@@ -311,7 +292,6 @@ jobs:
       has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_AlmaLinux_10.has_changes }}
       has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_AlmaLinux_10.has_errors }}
       verify-only: ${{ inputs.verify_only || false }}
-      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
@@ -328,7 +308,6 @@ jobs:
       has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_AlmaLinux_9.has_changes }}
       has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_AlmaLinux_9.has_errors }}
       verify-only: ${{ inputs.verify_only || false }}
-      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
@@ -345,7 +324,6 @@ jobs:
       has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_AlmaLinux_8.has_changes }}
       has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_AlmaLinux_8.has_errors }}
       verify-only: ${{ inputs.verify_only || false }}
-      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
@@ -362,7 +340,6 @@ jobs:
       has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_ArchLinux_rolling.has_changes }}
       has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_ArchLinux_rolling.has_errors }}
       verify-only: ${{ inputs.verify_only || false }}
-      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
@@ -379,7 +356,6 @@ jobs:
       has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_RockyLinux_10.has_changes }}
       has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_RockyLinux_10.has_errors }}
       verify-only: ${{ inputs.verify_only || false }}
-      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
@@ -396,7 +372,6 @@ jobs:
       has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_RockyLinux_9.has_changes }}
       has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_RockyLinux_9.has_errors }}
       verify-only: ${{ inputs.verify_only || false }}
-      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
 
@@ -413,6 +388,5 @@ jobs:
       has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_RockyLinux_8.has_changes }}
       has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_RockyLinux_8.has_errors }}
       verify-only: ${{ inputs.verify_only || false }}
-      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}

@@ -12,4 +12,4 @@ if ! git diff --cached --quiet; then
   git push origin HEAD:main
 fi
 gh workflow run build-base-images.yml --ref main \
-  -f "distribution=${SELECTED:-all}" -f architecture=all -f version=all -f verify_only=false
+  -f "distribution=${SELECTED:-all}" -f version=all -f verify_only=false

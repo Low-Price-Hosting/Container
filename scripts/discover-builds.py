@@ -17,7 +17,6 @@ metadata = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(metadata)
 
 DISTRIBUTIONS = ('Ubuntu', 'Debian', 'Centos', 'Alpine', 'Fedora', 'AlmaLinux', 'ArchLinux', 'RockyLinux')
-SUPPORTED_ARCHES = {'amd64', 'arm64', '386', 'arm', 'ppc64le', 's390x', 'riscv64'}
 
 
 def command(*args):
@@ -29,11 +28,10 @@ def platforms(bootstrap):
     result = {}
     for item in manifest.get('manifests', []):
         p = item.get('platform', {})
-        if p.get('os') != 'linux' or p.get('architecture') not in SUPPORTED_ARCHES:
+        if (p.get('os') != 'linux' or p.get('architecture') in (None, '', 'unknown')
+                or item.get('annotations', {}).get('vnd.docker.reference.type') == 'attestation-manifest'):
             continue
         variant = p.get('variant', '')
-        if p['architecture'] == 'arm' and variant not in ('v6', 'v7'):
-            continue
         # arm64/v8 is the default arm64 platform supported by native runners.
         if p['architecture'] == 'arm64' and variant == 'v8':
             variant = ''
@@ -121,7 +119,7 @@ def release_published(targets):
     return True
 
 
-def release_matrix(plan, verify_only=False, publish_release=True):
+def release_matrix(plan, verify_only=False):
     groups = {}
     for target in plan['include']:
         groups.setdefault((target['distribution'], target['version']), []).append(target)
@@ -133,7 +131,7 @@ def release_matrix(plan, verify_only=False, publish_release=True):
         errors = [error for error in plan.get('errors', []) if error['distribution'] == distribution
                   and error.get('version', 'sources') == version]
         has_errors = bool(errors) or any(target.get('error') for target in targets)
-        if (not changed and not has_errors and (verify_only or not publish_release or release_published(targets))):
+        if not changed and not has_errors and (verify_only or release_published(targets)):
             continue
         releases.append(dict(distribution=distribution, version=version,
                              key=distribution.lower() + '-' + version, targets=changed,
@@ -201,7 +199,7 @@ def release_job_id(distribution, version):
     return 'Build_' + distribution + '_' + re.sub(r'[^A-Za-z0-9_]', '_', version)
 
 
-def discover(selected='all', architecture='all', version='all', verify_only=False):
+def discover(selected='all', version='all', verify_only=False):
     result = []
     errors = []
     with tempfile.TemporaryDirectory(prefix='container-discovery-') as temp:
@@ -230,15 +228,11 @@ def discover(selected='all', architecture='all', version='all', verify_only=Fals
                     snapshot = snapshots[release['branch']]
                     commit = command('git', '-C', str(snapshot), 'rev-parse', 'HEAD')
                     available = platforms(release['bootstrap'])
-                    if distribution == 'ArchLinux':
-                        available = {p: d for p, d in available.items() if p == 'linux/amd64'}
                 except Exception as error:
                     errors.append(dict(distribution=distribution, version=release['version'], error=str(error)))
                     continue
                 pending = []
                 for platform in available:
-                    if architecture != 'all' and platform.split('/')[1] != architecture:
-                        continue
                     key = '-'.join([distribution.lower(), release['version'], platform.replace('/', '-')])
                     arch = platform.split('/')[1]
                     pinned_release = dict(release, bootstrap=release['bootstrap'].split('@')[0] + '@' + available[platform])
@@ -257,12 +251,11 @@ def discover(selected='all', architecture='all', version='all', verify_only=Fals
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--distribution', choices=('all', *DISTRIBUTIONS), default='all')
-    parser.add_argument('--architecture', default='all')
     parser.add_argument('--version', default='all')
     parser.add_argument('--verify-only', action='store_true')
     args = parser.parse_args()
-    plan = discover(args.distribution, args.architecture, args.version, args.verify_only)
-    plan['releases'] = release_matrix(plan, args.verify_only, args.architecture == 'all')
+    plan = discover(args.distribution, args.version, args.verify_only)
+    plan['releases'] = release_matrix(plan, args.verify_only)
     output = os.environ.get('GITHUB_OUTPUT')
     if output:
         with open(output, 'a') as stream:

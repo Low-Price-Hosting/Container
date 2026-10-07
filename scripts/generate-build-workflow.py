@@ -45,7 +45,6 @@ def render(catalog):
                 '      has-changes: ' + expression(release + '.has_changes'),
                 '      has-errors: ' + expression(release + '.has_errors'),
                 '      verify-only: ${{ inputs.verify_only || false }}',
-                "      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}",
                 '    secrets:',
                 '      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}',
                 '',

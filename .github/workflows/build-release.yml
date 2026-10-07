@@ -24,9 +24,6 @@ on:
       verify-only:
         type: boolean
         default: false
-      publish-release:
-        type: boolean
-        default: true
     secrets:
       GH_TOKEN_CLASSIC:
         required: false
@@ -118,7 +115,7 @@ jobs:
   publish:
     name: Publish
     needs: architecture
-    if: always() && !cancelled() && ((inputs.publish-release && !inputs.verify-only) || inputs.has-errors)
+    if: always() && !cancelled() && (!inputs.verify-only || inputs.has-errors)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -133,7 +130,7 @@ jobs:
           pattern: image-${{ inputs.release-key }}-*
           path: results
       - name: Log in to GHCR
-        if: inputs.publish-release && !inputs.verify-only
+        if: ${{ !inputs.verify-only }}
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
@@ -143,7 +140,7 @@ jobs:
         env:
           DISTRIBUTION: ${{ inputs.distribution }}
           VERSION: ${{ inputs.version }}
-          PUBLISH_RELEASE: ${{ inputs.publish-release && !inputs.verify-only }}
+          PUBLISH_RELEASE: ${{ !inputs.verify-only }}
         run: |
           mkdir -p results
           arguments=()

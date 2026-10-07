@@ -8,11 +8,6 @@ on:
         required: true
         default: all
         options: [all, Ubuntu, Debian, Centos, Alpine, Fedora, AlmaLinux, ArchLinux, RockyLinux]
-      architecture:
-        type: choice
-        required: true
-        default: all
-        options: [all, amd64, arm64]
       version:
         description: Release to build, or all
         type: string
@@ -27,7 +22,7 @@ permissions:
   packages: write
 
 concurrency:
-  group: base-images-${{ inputs.architecture || 'all' }}-${{ inputs.verify_only && format('{0}-{1}', inputs.distribution, inputs.version || 'all') || 'publish' }}
+  group: base-images-${{ inputs.verify_only && format('verify-{0}-{1}', inputs.distribution, inputs.version || 'all') || 'publish' }}
   cancel-in-progress: false
 
 jobs:
@@ -50,14 +45,13 @@ jobs:
         id: targets
         env:
           SELECTED: ${{ inputs.distribution || github.event.client_payload.distribution || 'all' }}
-          ARCHITECTURE: ${{ inputs.architecture || 'all' }}
           VERSION: ${{ inputs.version || 'all' }}
           VERIFY_ONLY: ${{ inputs.verify_only || false }}
         run: |
           set -euo pipefail
           arguments=()
           [[ "$VERIFY_ONLY" != true ]] || arguments+=(--verify-only)
-          python3 scripts/discover-builds.py --distribution "$SELECTED" --architecture "$ARCHITECTURE" --version "$VERSION" "${arguments[@]}" > build-plan.json
+          python3 scripts/discover-builds.py --distribution "$SELECTED" --version "$VERSION" "${arguments[@]}" > build-plan.json
       - uses: actions/upload-artifact@v7
         with:
           name: build-plan
