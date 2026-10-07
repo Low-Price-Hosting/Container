@@ -10,6 +10,8 @@ import subprocess
 import sys
 
 def scoped_plan(plan, distribution, version):
+    if distribution == 'all' and version == 'sources':
+        return dict(include=[], errors=[e for e in plan.get('errors', []) if 'version' not in e])
     return dict(include=[t for t in plan['include'] if t['distribution'] == distribution and t['version'] == version],
                 errors=[e for e in plan.get('errors', []) if e['distribution'] == distribution
                         and e.get('version', 'sources') == version])

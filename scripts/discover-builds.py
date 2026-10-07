@@ -185,6 +185,22 @@ def targets(distribution, source, branches):
     return releases
 
 
+def source_catalog(distribution, source):
+    mirror = f'https://github.com/Low-Price-Hosting/{distribution}.git'
+    subprocess.run(['git', 'clone', '--quiet', '--depth=1', '--single-branch', '--branch=main',
+                    mirror, str(source)], check=True)
+    provenance = json.loads((source / '.container-source.json').read_text())
+    if provenance.get('schema') != 1 or provenance.get('distribution') != distribution:
+        raise RuntimeError(f'{distribution} is not a production-code snapshot; run Cron first')
+    refs = command('git', 'ls-remote', '--heads', mirror).splitlines()
+    branches = {line.split('refs/heads/', 1)[1] for line in refs}
+    return branches, targets(distribution, source, branches)
+
+
+def release_job_id(distribution, version):
+    return 'Build_' + distribution + '_' + re.sub(r'[^A-Za-z0-9_]', '_', version)
+
+
 def discover(selected='all', architecture='all', version='all', verify_only=False):
     result = []
     errors = []
@@ -195,14 +211,7 @@ def discover(selected='all', architecture='all', version='all', verify_only=Fals
             mirror = f'https://github.com/Low-Price-Hosting/{distribution}.git'
             source = pathlib.Path(temp) / distribution
             try:
-                subprocess.run(['git', 'clone', '--quiet', '--depth=1', '--single-branch', '--branch=main',
-                                mirror, str(source)], check=True)
-                provenance = json.loads((source / '.container-source.json').read_text())
-                if provenance.get('schema') != 1 or provenance.get('distribution') != distribution:
-                    raise RuntimeError(f'{distribution} is not a production-code snapshot; run Cron first')
-                refs = command('git', 'ls-remote', '--heads', mirror).splitlines()
-                branches = {line.split('refs/heads/', 1)[1] for line in refs}
-                releases = targets(distribution, source, branches)
+                branches, releases = source_catalog(distribution, source)
             except Exception as error:
                 errors.append(dict(distribution=distribution, error=str(error)))
                 continue
@@ -241,8 +250,6 @@ def discover(selected='all', architecture='all', version='all', verify_only=Fals
                     result += list(pool.map(lambda t: plan_target(t, snapshot, verify_only), pending))
     if not result and not errors:
         raise RuntimeError('No build targets matched the request')
-    if len(result) > 256:
-        raise RuntimeError('The discovered targets exceed GitHub Actions matrix capacity')
     changed = [t for t in result if not t.get('reused') and not t.get('error')]
     return dict(include=result, matrix={'include': changed}, errors=errors)
 
@@ -259,8 +266,10 @@ if __name__ == '__main__':
     output = os.environ.get('GITHUB_OUTPUT')
     if output:
         with open(output, 'a') as stream:
-            stream.write('matrix=' + json.dumps(plan['releases'], separators=(',', ':')) + '\n')
-            stream.write('has_releases=' + str(bool(plan['releases']['include'])).lower() + '\n')
+            releases = {release_job_id(r['distribution'], r['version']): r
+                        for r in plan['releases']['include'] if r['version'] != 'sources'}
+            stream.write('releases=' + json.dumps(releases, separators=(',', ':')) + '\n')
+            stream.write('has_source_errors=' + str(any('version' not in e for e in plan['errors'])).lower() + '\n')
     summary = os.environ.get('GITHUB_STEP_SUMMARY')
     if summary:
         with open(summary, 'a') as stream:

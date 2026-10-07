@@ -1,0 +1,78 @@
+name: Build Linux base images
+
+on:
+  workflow_dispatch:
+    inputs:
+      distribution:
+        type: choice
+        required: true
+        default: all
+        options: [all, Ubuntu, Debian, Centos, Alpine, Fedora, AlmaLinux, ArchLinux, RockyLinux]
+      architecture:
+        type: choice
+        required: true
+        default: all
+        options: [all, amd64, arm64]
+      version:
+        description: Release to build, or all
+        type: string
+        default: all
+      verify_only:
+        description: Build and run tests without publishing
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: base-images-${{ inputs.architecture || 'all' }}-${{ inputs.verify_only && format('{0}-{1}', inputs.distribution, inputs.version || 'all') || 'publish' }}
+  cancel-in-progress: false
+
+jobs:
+  discover:
+    runs-on: ubuntu-24.04
+    outputs:
+      releases: ${{ steps.targets.outputs.releases }}
+      has_source_errors: ${{ steps.targets.outputs.has_source_errors }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - name: Log in to GHCR
+        if: inputs.verify_only != true
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GH_TOKEN_CLASSIC }}
+      - name: Discover releases and architectures from org source repositories
+        id: targets
+        env:
+          SELECTED: ${{ inputs.distribution || github.event.client_payload.distribution || 'all' }}
+          ARCHITECTURE: ${{ inputs.architecture || 'all' }}
+          VERSION: ${{ inputs.version || 'all' }}
+          VERIFY_ONLY: ${{ inputs.verify_only || false }}
+        run: |
+          set -euo pipefail
+          arguments=()
+          [[ "$VERIFY_ONLY" != true ]] || arguments+=(--verify-only)
+          python3 scripts/discover-builds.py --distribution "$SELECTED" --architecture "$ARCHITECTURE" --version "$VERSION" "${arguments[@]}" > build-plan.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: build-plan
+          path: build-plan.json
+
+  check_sources:
+    name: Source repository errors
+    needs: discover
+    if: needs.discover.outputs.has_source_errors == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: build-plan
+          path: plan
+      - name: Report failed source repositories
+        run: python3 scripts/publish-manifests.py plan/build-plan.json results --distribution all --version sources --validate-only

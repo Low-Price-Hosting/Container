@@ -1,0 +1,38 @@
+{
+  "Ubuntu": [
+    "22.04",
+    "24.04",
+    "26.04"
+  ],
+  "Debian": [
+    "bookworm",
+    "trixie"
+  ],
+  "Centos": [
+    "stream10",
+    "stream9"
+  ],
+  "Alpine": [
+    "3.21",
+    "3.22",
+    "3.23",
+    "3.24"
+  ],
+  "Fedora": [
+    "43",
+    "44"
+  ],
+  "AlmaLinux": [
+    "10",
+    "8",
+    "9"
+  ],
+  "ArchLinux": [
+    "rolling"
+  ],
+  "RockyLinux": [
+    "10",
+    "8",
+    "9"
+  ]
+}

@@ -1,8 +1,6 @@
 name: Build Linux base images
 
 on:
-  repository_dispatch:
-    types: [source-mirrors-updated]
   workflow_dispatch:
     inputs:
       distribution:
@@ -36,8 +34,8 @@ jobs:
   discover:
     runs-on: ubuntu-24.04
     outputs:
-      matrix: ${{ steps.targets.outputs.matrix }}
-      has_releases: ${{ steps.targets.outputs.has_releases }}
+      releases: ${{ steps.targets.outputs.releases }}
+      has_source_errors: ${{ steps.targets.outputs.has_source_errors }}
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
@@ -65,24 +63,356 @@ jobs:
           name: build-plan
           path: build-plan.json
 
-  build:
-    name: "Build: ${{ matrix.distribution }} ${{ matrix.version }}"
+  check_sources:
+    name: Source repository errors
     needs: discover
-    if: needs.discover.outputs.has_releases == 'true'
-    strategy:
-      fail-fast: false
-      max-parallel: 4
-      matrix: ${{ fromJSON(needs.discover.outputs.matrix) }}
+    if: needs.discover.outputs.has_source_errors == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: build-plan
+          path: plan
+      - name: Report failed source repositories
+        run: python3 scripts/publish-manifests.py plan/build-plan.json results --distribution all --version sources --validate-only
+
+  Build_Ubuntu_26_04:
+    name: "Build: Ubuntu 26.04"
+    needs: discover
+    if: ${{ fromJSON(needs.discover.outputs.releases).Build_Ubuntu_26_04 != null }}
     uses: ./.github/workflows/build-release.yml
     with:
-      distribution: ${{ matrix.distribution }}
-      version: ${{ matrix.version }}
-      release-key: ${{ matrix.key }}
-      targets: ${{ toJSON(matrix.targets) }}
-      has-changes: ${{ matrix.has_changes }}
-      has-errors: ${{ matrix.has_errors }}
+      distribution: "Ubuntu"
+      version: "26.04"
+      release-key: "ubuntu-26.04"
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.releases).Build_Ubuntu_26_04.targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_Ubuntu_26_04.has_changes }}
+      has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_Ubuntu_26_04.has_errors }}
       verify-only: ${{ inputs.verify_only || false }}
-      # Filtered manual builds must not replace the complete multi-arch tag.
+      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
+    secrets:
+      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
+
+  Build_Ubuntu_24_04:
+    name: "Build: Ubuntu 24.04"
+    needs: discover
+    if: ${{ fromJSON(needs.discover.outputs.releases).Build_Ubuntu_24_04 != null }}
+    uses: ./.github/workflows/build-release.yml
+    with:
+      distribution: "Ubuntu"
+      version: "24.04"
+      release-key: "ubuntu-24.04"
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.releases).Build_Ubuntu_24_04.targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_Ubuntu_24_04.has_changes }}
+      has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_Ubuntu_24_04.has_errors }}
+      verify-only: ${{ inputs.verify_only || false }}
+      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
+    secrets:
+      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
+
+  Build_Ubuntu_22_04:
+    name: "Build: Ubuntu 22.04"
+    needs: discover
+    if: ${{ fromJSON(needs.discover.outputs.releases).Build_Ubuntu_22_04 != null }}
+    uses: ./.github/workflows/build-release.yml
+    with:
+      distribution: "Ubuntu"
+      version: "22.04"
+      release-key: "ubuntu-22.04"
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.releases).Build_Ubuntu_22_04.targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_Ubuntu_22_04.has_changes }}
+      has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_Ubuntu_22_04.has_errors }}
+      verify-only: ${{ inputs.verify_only || false }}
+      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
+    secrets:
+      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
+
+  Build_Debian_trixie:
+    name: "Build: Debian trixie"
+    needs: discover
+    if: ${{ fromJSON(needs.discover.outputs.releases).Build_Debian_trixie != null }}
+    uses: ./.github/workflows/build-release.yml
+    with:
+      distribution: "Debian"
+      version: "trixie"
+      release-key: "debian-trixie"
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.releases).Build_Debian_trixie.targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_Debian_trixie.has_changes }}
+      has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_Debian_trixie.has_errors }}
+      verify-only: ${{ inputs.verify_only || false }}
+      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
+    secrets:
+      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
+
+  Build_Debian_bookworm:
+    name: "Build: Debian bookworm"
+    needs: discover
+    if: ${{ fromJSON(needs.discover.outputs.releases).Build_Debian_bookworm != null }}
+    uses: ./.github/workflows/build-release.yml
+    with:
+      distribution: "Debian"
+      version: "bookworm"
+      release-key: "debian-bookworm"
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.releases).Build_Debian_bookworm.targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_Debian_bookworm.has_changes }}
+      has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_Debian_bookworm.has_errors }}
+      verify-only: ${{ inputs.verify_only || false }}
+      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
+    secrets:
+      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
+
+  Build_Centos_stream10:
+    name: "Build: Centos stream10"
+    needs: discover
+    if: ${{ fromJSON(needs.discover.outputs.releases).Build_Centos_stream10 != null }}
+    uses: ./.github/workflows/build-release.yml
+    with:
+      distribution: "Centos"
+      version: "stream10"
+      release-key: "centos-stream10"
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.releases).Build_Centos_stream10.targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_Centos_stream10.has_changes }}
+      has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_Centos_stream10.has_errors }}
+      verify-only: ${{ inputs.verify_only || false }}
+      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
+    secrets:
+      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
+
+  Build_Centos_stream9:
+    name: "Build: Centos stream9"
+    needs: discover
+    if: ${{ fromJSON(needs.discover.outputs.releases).Build_Centos_stream9 != null }}
+    uses: ./.github/workflows/build-release.yml
+    with:
+      distribution: "Centos"
+      version: "stream9"
+      release-key: "centos-stream9"
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.releases).Build_Centos_stream9.targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_Centos_stream9.has_changes }}
+      has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_Centos_stream9.has_errors }}
+      verify-only: ${{ inputs.verify_only || false }}
+      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
+    secrets:
+      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
+
+  Build_Alpine_3_24:
+    name: "Build: Alpine 3.24"
+    needs: discover
+    if: ${{ fromJSON(needs.discover.outputs.releases).Build_Alpine_3_24 != null }}
+    uses: ./.github/workflows/build-release.yml
+    with:
+      distribution: "Alpine"
+      version: "3.24"
+      release-key: "alpine-3.24"
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.releases).Build_Alpine_3_24.targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_Alpine_3_24.has_changes }}
+      has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_Alpine_3_24.has_errors }}
+      verify-only: ${{ inputs.verify_only || false }}
+      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
+    secrets:
+      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
+
+  Build_Alpine_3_23:
+    name: "Build: Alpine 3.23"
+    needs: discover
+    if: ${{ fromJSON(needs.discover.outputs.releases).Build_Alpine_3_23 != null }}
+    uses: ./.github/workflows/build-release.yml
+    with:
+      distribution: "Alpine"
+      version: "3.23"
+      release-key: "alpine-3.23"
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.releases).Build_Alpine_3_23.targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_Alpine_3_23.has_changes }}
+      has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_Alpine_3_23.has_errors }}
+      verify-only: ${{ inputs.verify_only || false }}
+      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
+    secrets:
+      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
+
+  Build_Alpine_3_22:
+    name: "Build: Alpine 3.22"
+    needs: discover
+    if: ${{ fromJSON(needs.discover.outputs.releases).Build_Alpine_3_22 != null }}
+    uses: ./.github/workflows/build-release.yml
+    with:
+      distribution: "Alpine"
+      version: "3.22"
+      release-key: "alpine-3.22"
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.releases).Build_Alpine_3_22.targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_Alpine_3_22.has_changes }}
+      has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_Alpine_3_22.has_errors }}
+      verify-only: ${{ inputs.verify_only || false }}
+      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
+    secrets:
+      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
+
+  Build_Alpine_3_21:
+    name: "Build: Alpine 3.21"
+    needs: discover
+    if: ${{ fromJSON(needs.discover.outputs.releases).Build_Alpine_3_21 != null }}
+    uses: ./.github/workflows/build-release.yml
+    with:
+      distribution: "Alpine"
+      version: "3.21"
+      release-key: "alpine-3.21"
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.releases).Build_Alpine_3_21.targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_Alpine_3_21.has_changes }}
+      has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_Alpine_3_21.has_errors }}
+      verify-only: ${{ inputs.verify_only || false }}
+      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
+    secrets:
+      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
+
+  Build_Fedora_44:
+    name: "Build: Fedora 44"
+    needs: discover
+    if: ${{ fromJSON(needs.discover.outputs.releases).Build_Fedora_44 != null }}
+    uses: ./.github/workflows/build-release.yml
+    with:
+      distribution: "Fedora"
+      version: "44"
+      release-key: "fedora-44"
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.releases).Build_Fedora_44.targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_Fedora_44.has_changes }}
+      has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_Fedora_44.has_errors }}
+      verify-only: ${{ inputs.verify_only || false }}
+      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
+    secrets:
+      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
+
+  Build_Fedora_43:
+    name: "Build: Fedora 43"
+    needs: discover
+    if: ${{ fromJSON(needs.discover.outputs.releases).Build_Fedora_43 != null }}
+    uses: ./.github/workflows/build-release.yml
+    with:
+      distribution: "Fedora"
+      version: "43"
+      release-key: "fedora-43"
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.releases).Build_Fedora_43.targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_Fedora_43.has_changes }}
+      has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_Fedora_43.has_errors }}
+      verify-only: ${{ inputs.verify_only || false }}
+      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
+    secrets:
+      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
+
+  Build_AlmaLinux_10:
+    name: "Build: AlmaLinux 10"
+    needs: discover
+    if: ${{ fromJSON(needs.discover.outputs.releases).Build_AlmaLinux_10 != null }}
+    uses: ./.github/workflows/build-release.yml
+    with:
+      distribution: "AlmaLinux"
+      version: "10"
+      release-key: "almalinux-10"
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.releases).Build_AlmaLinux_10.targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_AlmaLinux_10.has_changes }}
+      has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_AlmaLinux_10.has_errors }}
+      verify-only: ${{ inputs.verify_only || false }}
+      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
+    secrets:
+      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
+
+  Build_AlmaLinux_9:
+    name: "Build: AlmaLinux 9"
+    needs: discover
+    if: ${{ fromJSON(needs.discover.outputs.releases).Build_AlmaLinux_9 != null }}
+    uses: ./.github/workflows/build-release.yml
+    with:
+      distribution: "AlmaLinux"
+      version: "9"
+      release-key: "almalinux-9"
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.releases).Build_AlmaLinux_9.targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_AlmaLinux_9.has_changes }}
+      has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_AlmaLinux_9.has_errors }}
+      verify-only: ${{ inputs.verify_only || false }}
+      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
+    secrets:
+      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
+
+  Build_AlmaLinux_8:
+    name: "Build: AlmaLinux 8"
+    needs: discover
+    if: ${{ fromJSON(needs.discover.outputs.releases).Build_AlmaLinux_8 != null }}
+    uses: ./.github/workflows/build-release.yml
+    with:
+      distribution: "AlmaLinux"
+      version: "8"
+      release-key: "almalinux-8"
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.releases).Build_AlmaLinux_8.targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_AlmaLinux_8.has_changes }}
+      has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_AlmaLinux_8.has_errors }}
+      verify-only: ${{ inputs.verify_only || false }}
+      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
+    secrets:
+      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
+
+  Build_ArchLinux_rolling:
+    name: "Build: ArchLinux rolling"
+    needs: discover
+    if: ${{ fromJSON(needs.discover.outputs.releases).Build_ArchLinux_rolling != null }}
+    uses: ./.github/workflows/build-release.yml
+    with:
+      distribution: "ArchLinux"
+      version: "rolling"
+      release-key: "archlinux-rolling"
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.releases).Build_ArchLinux_rolling.targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_ArchLinux_rolling.has_changes }}
+      has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_ArchLinux_rolling.has_errors }}
+      verify-only: ${{ inputs.verify_only || false }}
+      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
+    secrets:
+      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
+
+  Build_RockyLinux_10:
+    name: "Build: RockyLinux 10"
+    needs: discover
+    if: ${{ fromJSON(needs.discover.outputs.releases).Build_RockyLinux_10 != null }}
+    uses: ./.github/workflows/build-release.yml
+    with:
+      distribution: "RockyLinux"
+      version: "10"
+      release-key: "rockylinux-10"
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.releases).Build_RockyLinux_10.targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_RockyLinux_10.has_changes }}
+      has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_RockyLinux_10.has_errors }}
+      verify-only: ${{ inputs.verify_only || false }}
+      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
+    secrets:
+      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
+
+  Build_RockyLinux_9:
+    name: "Build: RockyLinux 9"
+    needs: discover
+    if: ${{ fromJSON(needs.discover.outputs.releases).Build_RockyLinux_9 != null }}
+    uses: ./.github/workflows/build-release.yml
+    with:
+      distribution: "RockyLinux"
+      version: "9"
+      release-key: "rockylinux-9"
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.releases).Build_RockyLinux_9.targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_RockyLinux_9.has_changes }}
+      has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_RockyLinux_9.has_errors }}
+      verify-only: ${{ inputs.verify_only || false }}
+      publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
+    secrets:
+      GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
+
+  Build_RockyLinux_8:
+    name: "Build: RockyLinux 8"
+    needs: discover
+    if: ${{ fromJSON(needs.discover.outputs.releases).Build_RockyLinux_8 != null }}
+    uses: ./.github/workflows/build-release.yml
+    with:
+      distribution: "RockyLinux"
+      version: "8"
+      release-key: "rockylinux-8"
+      targets: ${{ toJSON(fromJSON(needs.discover.outputs.releases).Build_RockyLinux_8.targets) }}
+      has-changes: ${{ fromJSON(needs.discover.outputs.releases).Build_RockyLinux_8.has_changes }}
+      has-errors: ${{ fromJSON(needs.discover.outputs.releases).Build_RockyLinux_8.has_errors }}
+      verify-only: ${{ inputs.verify_only || false }}
       publish-release: ${{ inputs.architecture != 'amd64' && inputs.architecture != 'arm64' }}
     secrets:
       GH_TOKEN_CLASSIC: ${{ secrets.GH_TOKEN_CLASSIC }}
