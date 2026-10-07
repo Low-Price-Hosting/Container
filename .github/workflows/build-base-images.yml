@@ -41,6 +41,13 @@ jobs:
       matrix: ${{ steps.targets.outputs.matrix }}
     steps:
       - uses: actions/checkout@v4
+      - name: Check GH_TOKEN package upload access before building
+        if: inputs.verify_only != true
+        timeout-minutes: 5
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          SELECTED: ${{ inputs.distribution || github.event.client_payload.distribution || 'all' }}
+        run: python3 scripts/check-ghcr-access.py "$SELECTED"
       - uses: docker/setup-buildx-action@v3
       - name: Discover releases and architectures from org source repositories
         id: targets
