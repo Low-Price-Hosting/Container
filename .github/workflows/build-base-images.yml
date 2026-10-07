@@ -204,8 +204,6 @@ jobs:
       HAS_CHANGES: ${{ matrix.has_changes }}
     steps:
       - uses: actions/checkout@v7
-      - uses: docker/setup-buildx-action@v4
-        if: inputs.verify_only != true
       - uses: actions/download-artifact@v8
         with:
           name: build-plan
