@@ -233,6 +233,7 @@ def discover(selected='all', version='all', verify_only=False):
                     arch = platform.split('/')[1]
                     pinned_release = dict(release, bootstrap=release['bootstrap'].split('@')[0] + '@' + available[platform])
                     pending.append(dict(distribution=distribution, **pinned_release, platform=platform, key=key,
+                                        architecture=platform.removeprefix('linux/'),
                                         source_commit=commit,
                                         emulation=arch if arch not in ('amd64', 'arm64', '386') else '',
                                         runner='ubuntu-24.04-arm' if arch == 'arm64' else 'ubuntu-24.04'))
@@ -244,6 +245,20 @@ def discover(selected='all', version='all', verify_only=False):
     return dict(include=result, matrix={'include': changed}, errors=errors)
 
 
+def workflow_outputs(plan):
+    """Pass the discovered targets to matrices in this same workflow run."""
+    matrix = {'include': sorted(plan['matrix']['include'],
+                               key=lambda t: (t['architecture'], t['distribution'], t['version']))}
+    releases = {'include': [{key: release[key] for key in ('distribution', 'version', 'key')}
+                            for release in plan['releases']['include'] if release['version'] != 'sources']}
+    output = os.environ.get('GITHUB_OUTPUT')
+    if output:
+        with open(output, 'a') as stream:
+            for name, value in (('matrix', matrix), ('releases', releases),
+                                ('build-count', len(matrix['include'])), ('release-count', len(releases['include']))):
+                stream.write(f'{name}={json.dumps(value, separators=(",", ":"))}\n')
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--distribution', choices=('all', *DISTRIBUTIONS), default='all')
@@ -252,13 +267,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     plan = discover(args.distribution, args.version, args.verify_only)
     plan['releases'] = release_matrix(plan, args.verify_only)
-    summary = os.environ.get('GITHUB_STEP_SUMMARY')
-    if summary:
-        with open(summary, 'a') as stream:
-            stream.write('## Build plan\n\n| Distribution / release | Platform | Decision |\n|---|---|---|\n')
-            for target in plan['include']:
-                state = ('Failed: ' + target['error'].replace('|', '\\|').replace('\n', ' ')) if target.get('error') else 'Reuse tested image' if target.get('reused') else 'Build and test'
-                stream.write(f"| {target['distribution']} {target['version']} | {target['platform']} | {state} |\n")
-            for error in plan['errors']:
-                stream.write(f"\n**{error['distribution']} {error.get('version', '')}:** {error['error']}\n")
+    plan['verify_only'] = args.verify_only
+    workflow_outputs(plan)
     print(json.dumps(plan, separators=(',', ':')))

@@ -59,14 +59,10 @@ def publish(plan, directory, validate_only=False):
         except subprocess.CalledProcessError as error:
             failures.append(dict(distribution=distribution, version=version, error=str(error)))
             statuses.append((distribution, version, len(images), len(targets), 'Publish failed'))
-    summary = os.environ.get('GITHUB_STEP_SUMMARY')
-    if summary:
-        with open(summary, 'a') as stream:
-            stream.write('## Release publication\n\n| Distribution | Version | Tested architectures | Result |\n|---|---|---|---|\n')
-            for distribution, version, passed, expected, status in statuses:
-                stream.write(f'| {distribution} | {version} | {passed}/{expected} | {status} |\n')
-            for failure in failures:
-                stream.write(f"\n**{failure['distribution']} {failure.get('version', '')}:** {failure['error']}\n")
+    result = os.environ.get('PUBLICATION_RESULT')
+    if result:
+        pathlib.Path(result).write_text(json.dumps(dict(statuses=statuses, failures=failures)))
+    print(json.dumps(statuses))
     for failure in failures:
         print(failure, file=sys.stderr)
     return 1 if failures else 0
