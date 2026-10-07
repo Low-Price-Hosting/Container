@@ -1,11 +1,21 @@
 #!/usr/bin/env python3
 """Discover production targets from the organization's source snapshots."""
 import argparse
+import concurrent.futures
+import hashlib
+import importlib.util
 import json
+import os
 import pathlib
 import re
 import subprocess
 import tempfile
+
+REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+spec = importlib.util.spec_from_file_location('repository_metadata', REPO_ROOT / 'scripts/repository-metadata.py')
+metadata = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(metadata)
+INPUT_ANNOTATION = 'io.low-price-hosting.build.inputs'
 
 DISTRIBUTIONS = ('Ubuntu', 'Debian', 'Centos', 'Alpine', 'Fedora', 'AlmaLinux', 'ArchLinux', 'RockyLinux')
 SUPPORTED_ARCHES = {'amd64', 'arm64', '386', 'arm', 'ppc64le', 's390x', 'riscv64'}
@@ -17,7 +27,7 @@ def command(*args):
 
 def platforms(bootstrap):
     manifest = json.loads(command('docker', 'buildx', 'imagetools', 'inspect', '--raw', bootstrap))
-    result = set()
+    result = {}
     for item in manifest.get('manifests', []):
         p = item.get('platform', {})
         if p.get('os') != 'linux' or p.get('architecture') not in SUPPORTED_ARCHES:
@@ -28,10 +38,81 @@ def platforms(bootstrap):
         # arm64/v8 is the default arm64 platform supported by native runners.
         if p['architecture'] == 'arm64' and variant == 'v8':
             variant = ''
-        result.add('linux/' + p['architecture'] + (('/' + variant) if variant else ''))
+        result['linux/' + p['architecture'] + (('/' + variant) if variant else '')] = item['digest']
     if not result:
         raise RuntimeError(f'{bootstrap} does not advertise supported build architectures')
-    return sorted(result)
+    return dict(sorted(result.items()))
+
+
+def files_hash(root, paths):
+    digest = hashlib.sha256()
+    for path in sorted(paths):
+        relative = path.relative_to(root).as_posix()
+        data = path.read_bytes()
+        if b'\0' not in data:
+            data = data.replace(b'\r\n', b'\n')
+        digest.update(relative.encode() + b'\0' + data + b'\0')
+    return digest.hexdigest()
+
+
+def recipe_hash(distribution, version, source):
+    paths = [p for p in source.rglob('*') if p.is_file() and '.git' not in p.relative_to(source).parts
+             and not p.name.startswith(('.container-', 'README', 'LICENSE', 'COPYING'))]
+    if distribution == 'AlmaLinux':
+        paths = [source / 'Containerfiles' / version / 'Containerfile.default']
+    elif distribution == 'Centos':
+        paths = [p for p in paths if p.name.startswith(f'CentOS-Stream-{version.removeprefix("stream")}-')]
+    return files_hash(source, paths)
+
+
+def implementation_hash(distribution):
+    lower = distribution.lower()
+    paths = ['build-base.sh', 'scripts/build-common.sh', 'scripts/package-cache.sh',
+             'scripts/repository-metadata.py', 'scripts/test-images.sh']
+    if distribution in ('Centos', 'RockyLinux'):
+        paths.append('scripts/kickstart-rootfs.py')
+    if distribution in ('Fedora', 'RockyLinux'):
+        paths.append('scripts/label-oci.py')
+    files = [REPO_ROOT / path for path in paths]
+    files += [p for p in (REPO_ROOT / lower).rglob('*') if p.is_file()]
+    return files_hash(REPO_ROOT, files)
+
+
+def tested_record(target):
+    reference = 'ghcr.io/low-price-hosting/' + target['distribution'].lower() + ':tested-' + target['key']
+    inspect = subprocess.run(['docker', 'buildx', 'imagetools', 'inspect', '--format', '{{json .}}', reference],
+                             text=True, capture_output=True)
+    if inspect.returncode:
+        return None
+    manifest = json.loads(inspect.stdout)['manifest']
+    if manifest.get('annotations', {}).get(INPUT_ANNOTATION) != target['fingerprint']:
+        return None
+    platforms_found = set()
+    for item in manifest.get('manifests', []):
+        p = item.get('platform', {})
+        if p.get('os') == 'linux':
+            variant = p.get('variant', '')
+            if p['architecture'] == 'arm64' and variant == 'v8':
+                variant = ''
+            platforms_found.add('linux/' + p['architecture'] + ('/' + variant if variant else ''))
+    if platforms_found != {target['platform']}:
+        return None
+    return dict(key=target['key'], platform=target['platform'], fingerprint=target['fingerprint'],
+                tested=True, image=reference.split(':')[0] + '@' + manifest['digest'])
+
+
+def plan_target(target, source, verify_only):
+    try:
+        packages = metadata.fingerprint(target, source, REPO_ROOT)
+        inputs = [recipe_hash(target['distribution'], target['version'], source),
+                  implementation_hash(target['distribution']), target['bootstrap'], target['platform'],
+                  target['version'], packages]
+        target['fingerprint'] = hashlib.sha256(json.dumps(inputs).encode()).hexdigest()
+        if not verify_only:
+            target['reused'] = tested_record(target)
+    except Exception as error:
+        target['error'] = str(error)
+    return target
 
 
 def targets(distribution, source, branches):
@@ -64,39 +145,66 @@ def targets(distribution, source, branches):
     return releases
 
 
-def discover(selected='all', architecture='all', version='all'):
+def discover(selected='all', architecture='all', version='all', verify_only=False):
     result = []
+    errors = []
     with tempfile.TemporaryDirectory(prefix='container-discovery-') as temp:
         for distribution in DISTRIBUTIONS:
             if selected not in ('all', distribution):
                 continue
             mirror = f'https://github.com/Low-Price-Hosting/{distribution}.git'
             source = pathlib.Path(temp) / distribution
-            subprocess.run(['git', 'clone', '--quiet', '--depth=1', '--single-branch', '--branch=main',
-                            mirror, str(source)], check=True)
-            provenance = json.loads((source / '.container-source.json').read_text())
-            if provenance.get('schema') != 1 or provenance.get('distribution') != distribution:
-                raise RuntimeError(f'{distribution} is not a production-code snapshot; run Cron first')
-            refs = command('git', 'ls-remote', '--heads', mirror).splitlines()
-            branches = {line.split('refs/heads/', 1)[1] for line in refs}
-            for release in targets(distribution, source, branches):
+            try:
+                subprocess.run(['git', 'clone', '--quiet', '--depth=1', '--single-branch', '--branch=main',
+                                mirror, str(source)], check=True)
+                provenance = json.loads((source / '.container-source.json').read_text())
+                if provenance.get('schema') != 1 or provenance.get('distribution') != distribution:
+                    raise RuntimeError(f'{distribution} is not a production-code snapshot; run Cron first')
+                refs = command('git', 'ls-remote', '--heads', mirror).splitlines()
+                branches = {line.split('refs/heads/', 1)[1] for line in refs}
+                releases = targets(distribution, source, branches)
+            except Exception as error:
+                errors.append(dict(distribution=distribution, error=str(error)))
+                continue
+            snapshots = {'main': source}
+            for release in releases:
                 if version != 'all' and release['version'] != version:
                     continue
-                if release['branch'] not in branches:
-                    raise RuntimeError(f"Missing source branch: {distribution}/{release['branch']}")
-                # No architecture is inferred from another distribution's image.
-                available = ['linux/amd64'] if distribution == 'ArchLinux' else platforms(release['bootstrap'])
+                try:
+                    if release['branch'] not in branches:
+                        raise RuntimeError(f"Missing source branch: {distribution}/{release['branch']}")
+                    if release['branch'] not in snapshots:
+                        snapshot = source.parent / (distribution + '-' + release['branch'].replace('/', '-'))
+                        subprocess.run(['git', 'clone', '--quiet', '--depth=1', '--single-branch',
+                                        '--branch=' + release['branch'], mirror, str(snapshot)], check=True)
+                        snapshots[release['branch']] = snapshot
+                    snapshot = snapshots[release['branch']]
+                    commit = command('git', '-C', str(snapshot), 'rev-parse', 'HEAD')
+                    available = platforms(release['bootstrap'])
+                    if distribution == 'ArchLinux':
+                        available = {p: d for p, d in available.items() if p == 'linux/amd64'}
+                except Exception as error:
+                    errors.append(dict(distribution=distribution, version=release['version'], error=str(error)))
+                    continue
+                pending = []
                 for platform in available:
                     if architecture != 'all' and platform.split('/')[1] != architecture:
                         continue
                     key = '-'.join([distribution.lower(), release['version'], platform.replace('/', '-')])
-                    result.append(dict(distribution=distribution, **release, platform=platform, key=key,
-                                       runner='ubuntu-24.04-arm' if platform.startswith('linux/arm64') else 'ubuntu-24.04'))
-    if not result:
+                    arch = platform.split('/')[1]
+                    pinned_release = dict(release, bootstrap=release['bootstrap'].split('@')[0] + '@' + available[platform])
+                    pending.append(dict(distribution=distribution, **pinned_release, platform=platform, key=key,
+                                        source_commit=commit,
+                                        emulation=arch if arch not in ('amd64', 'arm64', '386') else '',
+                                        runner='ubuntu-24.04-arm' if arch == 'arm64' else 'ubuntu-24.04'))
+                with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:
+                    result += list(pool.map(lambda t: plan_target(t, snapshot, verify_only), pending))
+    if not result and not errors:
         raise RuntimeError('No build targets matched the request')
     if len(result) > 256:
         raise RuntimeError('The discovered targets exceed GitHub Actions matrix capacity')
-    return {'include': result}
+    changed = [t for t in result if not t.get('reused') and not t.get('error')]
+    return dict(include=result, matrix={'include': changed}, errors=errors)
 
 
 if __name__ == '__main__':
@@ -104,5 +212,21 @@ if __name__ == '__main__':
     parser.add_argument('--distribution', choices=('all', *DISTRIBUTIONS), default='all')
     parser.add_argument('--architecture', default='all')
     parser.add_argument('--version', default='all')
+    parser.add_argument('--verify-only', action='store_true')
     args = parser.parse_args()
-    print(json.dumps(discover(args.distribution, args.architecture, args.version), separators=(',', ':')))
+    plan = discover(args.distribution, args.architecture, args.version, args.verify_only)
+    output = os.environ.get('GITHUB_OUTPUT')
+    if output:
+        with open(output, 'a') as stream:
+            stream.write('matrix=' + json.dumps(plan['matrix'], separators=(',', ':')) + '\n')
+            stream.write('has_changes=' + str(bool(plan['matrix']['include'])).lower() + '\n')
+    summary = os.environ.get('GITHUB_STEP_SUMMARY')
+    if summary:
+        with open(summary, 'a') as stream:
+            stream.write('## Build plan\n\n| Distribution / release | Platform | Decision |\n|---|---|---|\n')
+            for target in plan['include']:
+                state = 'Failed to check package indexes' if target.get('error') else 'Reuse tested image' if target.get('reused') else 'Build and test'
+                stream.write(f"| {target['distribution']} {target['version']} | {target['platform']} | {state} |\n")
+            for error in plan['errors']:
+                stream.write(f"\n**{error['distribution']} {error.get('version', '')}:** {error['error']}\n")
+    print(json.dumps(plan, separators=(',', ':')))

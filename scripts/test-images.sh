@@ -38,3 +38,19 @@ while IFS= read -r reference; do
   [[ "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.source" }}' "$reference")" == "$expected_source" ]]
   docker image rm --force "$reference" >/dev/null
 done < "$references"
+
+# A pushed image alone is not proof that its runtime test passed.
+record="$RUNNER_TEMP/image.json"
+key=$(jq -er .key "$record")
+fingerprint=$(jq -er .fingerprint "$record")
+if [[ "${VERIFY_ONLY:-false}" != true ]]; then
+  marker="ghcr.io/low-price-hosting/${distribution,,}:tested-$key"
+  docker buildx imagetools create --annotation "index:io.low-price-hosting.build.inputs=$fingerprint" \
+    --tag "$marker" "$(jq -er .image "$record")"
+  digest=$(docker buildx imagetools inspect "$marker" --format '{{.Manifest.Digest}}')
+  [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]
+  jq --arg image "${marker%%:*}@$digest" '.image=$image | .tested=true' "$record" > "$record.tmp"
+else
+  jq '.tested=true' "$record" > "$record.tmp"
+fi
+mv "$record.tmp" "$record"

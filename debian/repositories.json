@@ -1,0 +1,5 @@
+[
+  {"kind":"apt","url":"https://deb.debian.org/debian/dists/{version}/InRelease"},
+  {"kind":"apt","url":"https://deb.debian.org/debian/dists/{version}-updates/InRelease"},
+  {"kind":"apt","url":"https://security.debian.org/debian-security/dists/{version}-security/InRelease"}
+]

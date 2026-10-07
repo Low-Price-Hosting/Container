@@ -1,0 +1,5 @@
+[
+  {"kind":"apt","url":"https://{ubuntu_archive}/dists/{suite}/InRelease"},
+  {"kind":"apt","url":"https://{ubuntu_archive}/dists/{suite}-updates/InRelease"},
+  {"kind":"apt","url":"https://{ubuntu_archive}/dists/{suite}-security/InRelease"}
+]

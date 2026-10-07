@@ -6,11 +6,10 @@ run_builder() {
     --mount "type=bind,src=$WORK/context,dst=/output" \
     --mount "type=bind,src=$REPO_ROOT/scripts,dst=/build-tools/scripts,readonly" \
     --mount "type=bind,src=$REPO_ROOT/$lower,dst=/build-tools/$lower,readonly" \
+    --mount "type=bind,src=$PACKAGE_CACHE,dst=/package-cache" \
     --env "VERSION=$VERSION" --env "SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH" \
-    "$BOOTSTRAP_ID" "$@"
+    "$BOOTSTRAP_ID" /bin/sh /build-tools/scripts/package-cache.sh "$@"
 }
-metadata_hash() { sha256sum | cut -d' ' -f1; }
-package_metadata() { run_builder /bin/sh /build-tools/scripts/package-metadata.sh | metadata_hash; }
 publish_dockerfile() {
   local dockerfile=$1; shift
   local output=--push

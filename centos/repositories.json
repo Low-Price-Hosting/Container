@@ -1,0 +1,5 @@
+[
+  {"kind":"rpm","url":"https://mirror.stream.centos.org/{version}-stream/BaseOS/{rpm}/os/repodata/repomd.xml"},
+  {"kind":"rpm","url":"https://mirror.stream.centos.org/{version}-stream/AppStream/{rpm}/os/repodata/repomd.xml"},
+  {"kind":"rpm","url":"https://mirror.stream.centos.org/SIGs/{version}-stream/extras/{rpm}/extras-common/repodata/repomd.xml"}
+]

@@ -1,0 +1,4 @@
+[
+  {"kind":"apk","url":"https://dl-cdn.alpinelinux.org/alpine/v{version}/main/{apk}/APKINDEX.tar.gz"},
+  {"kind":"apk","url":"https://dl-cdn.alpinelinux.org/alpine/v{version}/community/{apk}/APKINDEX.tar.gz"}
+]

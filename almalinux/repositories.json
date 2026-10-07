@@ -1,0 +1,5 @@
+[
+  {"kind":"rpm","url":"https://repo.almalinux.org/almalinux/{version}/BaseOS/{rpm}/os/repodata/repomd.xml"},
+  {"kind":"rpm","url":"https://repo.almalinux.org/almalinux/{version}/AppStream/{rpm}/os/repodata/repomd.xml"},
+  {"kind":"rpm","url":"https://repo.almalinux.org/almalinux/{version}/extras/{rpm}/os/repodata/repomd.xml"}
+]
