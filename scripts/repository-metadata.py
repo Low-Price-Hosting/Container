@@ -89,13 +89,16 @@ def fingerprint(target, source, repo_root):
                   suite=target['branch'].removeprefix('ubuntu/'))
     settings = json.loads((repo_root / distro.lower() / 'repositories.json').read_text())
     urls = [(item['kind'], item['url'].format(**values)) for item in settings
-            if int(values['version']) >= item.get('min_version', 0)] if distro in ('RockyLinux',) else [
+            if int(values['version']) >= item.get('min_version', 0)
+            and arch not in item.get('exclude_architectures', [])] if distro in ('RockyLinux',) else [
                 (item['kind'], item['url'].format(**values)) for item in settings]
     # The rootfs repositories remain defined by the mirrored upstream descriptions.
     if distro in ('Fedora', 'RockyLinux'):
         variables = dict(releasever=values['version'], basearch=rpm)
         urls += xml_repositories(source, 'repositories/core.xml', variables)
-        if distro == 'RockyLinux':
+        # Rocky's Container-Base packages exist in its native repositories. SIG/Core
+        # has no riscv64 tooling; the matching builder omits that unused include.
+        if distro == 'RockyLinux' and not (arch == 'riscv64' and int(values['version']) >= 10):
             urls += xml_repositories(source, 'repositories/sig-core.xml', variables)
     if not urls:
         raise RuntimeError(f'No package repositories configured for {distro}')

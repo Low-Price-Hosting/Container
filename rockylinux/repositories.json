@@ -3,5 +3,5 @@
   {"kind":"rpm","url":"https://dl.rockylinux.org/pub/rocky/{version}/AppStream/{rpm}/os/repodata/repomd.xml"},
   {"kind":"rpm","url":"https://dl.rockylinux.org/pub/rocky/{version}/extras/{rpm}/os/repodata/repomd.xml"},
   {"kind":"rpm","url":"https://dl.rockylinux.org/pub/rocky/{version}/CRB/{rpm}/os/repodata/repomd.xml","min_version":10},
-  {"kind":"metalink","url":"https://mirrors.fedoraproject.org/metalink?repo=epel-{version}&arch={rpm}","min_version":10}
+  {"kind":"metalink","url":"https://mirrors.fedoraproject.org/metalink?repo=epel-{version}&arch={rpm}","min_version":10,"exclude_architectures":["riscv64"]}
 ]

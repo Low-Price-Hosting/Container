@@ -8,6 +8,7 @@ import json
 import os
 import pathlib
 import re
+import subprocess
 import sys
 import time
 import urllib.error
@@ -93,30 +94,39 @@ def registry_request(request):
                 return response.read(), response.headers
         except urllib.error.HTTPError as error:
             if error.code not in (408, 429, 500, 502, 503, 504) or attempt == 2:
-                raise RuntimeError(f'GHCR request failed (HTTP {error.code}): {request.get_method()} {request.full_url}') from None
+                raise RuntimeError(f'Registry request failed (HTTP {error.code}): {request.get_method()} {request.full_url}') from None
         except urllib.error.URLError:
             if attempt == 2:
-                raise RuntimeError(f'GHCR connection failed: {request.get_method()} {request.full_url}') from None
+                raise RuntimeError(f'Registry connection failed: {request.get_method()} {request.full_url}') from None
         time.sleep(5 * (attempt + 1))
 
 
 def publish_index(repository, tags, index):
     # The tested child manifests are already present in this repository by digest.
     # PUT the OCI index directly to preserve descriptor annotations and variants.
-    name = repository.removeprefix('ghcr.io/')
-    credentials = base64.b64encode((os.environ['GITHUB_ACTOR'] + ':' + os.environ['GH_TOKEN']).encode()).decode()
-    query = urllib.parse.urlencode(dict(service='ghcr.io', scope=f'repository:{name}:pull,push'))
-    token_body, _ = registry_request(urllib.request.Request('https://ghcr.io/token?' + query,
+    if repository.startswith('ghcr.io/low-price-hosting/'):
+        name = repository.removeprefix('ghcr.io/')
+        registry, service, token_url = 'ghcr.io', 'ghcr.io', 'https://ghcr.io/token'
+        username, password = os.environ['GITHUB_ACTOR'], os.environ['GH_TOKEN']
+    elif repository.startswith('docker.io/lphllc/'):
+        name = repository.removeprefix('docker.io/')
+        registry, service, token_url = 'registry-1.docker.io', 'registry.docker.io', 'https://auth.docker.io/token'
+        username, password = os.environ.get('DOCKER_USERNAME') or 'lphllc', os.environ['DOCKER_SECRET']
+    else:
+        raise ValueError(f'Unexpected release repository: {repository}')
+    credentials = base64.b64encode((username + ':' + password).encode()).decode()
+    query = urllib.parse.urlencode(dict(service=service, scope=f'repository:{name}:pull,push'))
+    token_body, _ = registry_request(urllib.request.Request(token_url + '?' + query,
                                     headers={'Authorization': 'Basic ' + credentials}))
     bearer = json.loads(token_body).get('token') or json.loads(token_body)['access_token']
     body = json.dumps(index, separators=(',', ':'), sort_keys=True).encode()
     expected = 'sha256:' + hashlib.sha256(body).hexdigest()
     for tag in tags:
-        url = 'https://ghcr.io/v2/' + name + '/manifests/' + tag
+        url = 'https://' + registry + '/v2/' + name + '/manifests/' + tag
         headers = {'Authorization': 'Bearer ' + bearer, 'Content-Type': INDEX_TYPE}
         _, response_headers = registry_request(urllib.request.Request(url, data=body, headers=headers, method='PUT'))
         if response_headers.get('Docker-Content-Digest', expected) != expected:
-            raise RuntimeError(f'GHCR returned a different index digest: {repository}:{tag}')
+            raise RuntimeError(f'Registry returned a different index digest: {repository}:{tag}')
         published, _ = registry_request(urllib.request.Request(url,
                             headers={'Authorization': 'Bearer ' + bearer, 'Accept': INDEX_TYPE}))
         if hashlib.sha256(published).hexdigest() != expected.removeprefix('sha256:'):
@@ -154,8 +164,19 @@ def publish(plan, directory, validate_only=False):
             statuses.append((distribution, version, len(approved), len(targets), 'Tests passed; publication disabled'))
             continue
         try:
-            publish_index(*release_index(distribution, version, targets, approved))
-            statuses.append((distribution, version, len(approved), len(targets), 'Published'))
+            repository, tags, index = release_index(distribution, version, targets, approved)
+            docker_repository = 'docker.io/lphllc/' + distribution.lower()
+            # Reused GHCR records carry the same tested approval as newly built records.
+            # Copy immutable child manifests, including their blobs, without rebuilding.
+            for target in targets:
+                source = approved[target['key']]['image']
+                destination = docker_repository + '@' + approved[target['key']]['descriptor']['digest']
+                subprocess.run(['bash', str(pathlib.Path(__file__).with_name('push-images.sh')),
+                                '--copy', source, destination], check=True)
+            # Identical index bytes preserve variants, tested fingerprints and OCI labels.
+            publish_index(repository, tags, index)
+            publish_index(docker_repository, tags, index)
+            statuses.append((distribution, version, len(approved), len(targets), 'Published: GHCR + Docker Hub'))
         except Exception as error:
             failures.append(dict(distribution=distribution, version=version, error=str(error)))
             statuses.append((distribution, version, len(approved), len(targets), 'Publish failed'))

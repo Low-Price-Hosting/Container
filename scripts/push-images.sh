@@ -1,5 +1,37 @@
 #!/usr/bin/env bash
 set -euo pipefail
+# Upload by digest, keeping temporary architecture/cache tags out of the package.
+crane="$RUNNER_TEMP/registry-tools/crane"
+if [[ ! -x "$crane" ]]; then
+  mkdir -p "${crane%/*}"
+  tools_archive="${crane%/*}/crane.tar.gz"
+  curl --fail --silent --show-error --location --retry 3 \
+    https://github.com/google/go-containerregistry/releases/download/v0.22.1/go-containerregistry_Linux_x86_64.tar.gz \
+    --output "$tools_archive"
+  echo "0ab7a1d6932a213aed964ce97666c3077fe691c8606413674a8b3e0b9ec4cda0  $tools_archive" | sha256sum --check
+  tar -xzf "$tools_archive" -C "${crane%/*}" crane
+  rm "$tools_archive"
+fi
+if [[ "${1:-}" == --copy ]]; then
+  [[ $# == 3 ]]
+  source=$2
+  destination=$3
+  [[ "$source" =~ ^ghcr\.io/low-price-hosting/[a-z0-9]+@sha256:[a-f0-9]{64}$ ]]
+  [[ "$destination" == "docker.io/lphllc/${source#ghcr.io/low-price-hosting/}" ]]
+  digest=${source##*@}
+  # The caller validates the complete release's tested descriptors before copying.
+  for attempt in 1 2 3; do
+    if "$crane" copy "$source" "$destination"; then
+      break
+    fi
+    ((attempt < 3)) || exit 1
+    echo "Docker Hub copy failed; retrying ($attempt/3)" >&2
+    sleep $((attempt * 5))
+  done
+  [[ "$("$crane" digest "$destination")" == "$digest" ]]
+  exit 0
+fi
+
 archive=${1:?Tested image archive is required}
 record="$RUNNER_TEMP/image.json"
 # Only the exact archive approved by the runtime test can be published.
@@ -13,18 +45,6 @@ checksum=$(sha256sum "$archive")
 repository=${reference%%:*}
 [[ "$repository" == ghcr.io/low-price-hosting/* ]]
 
-# Upload by digest, keeping temporary architecture/cache tags out of the package.
-crane="$RUNNER_TEMP/registry-tools/crane"
-if [[ ! -x "$crane" ]]; then
-  mkdir -p "${crane%/*}"
-  tools_archive="${crane%/*}/crane.tar.gz"
-  curl --fail --silent --show-error --location --retry 3 \
-    https://github.com/google/go-containerregistry/releases/download/v0.22.1/go-containerregistry_Linux_x86_64.tar.gz \
-    --output "$tools_archive"
-  echo "0ab7a1d6932a213aed964ce97666c3077fe691c8606413674a8b3e0b9ec4cda0  $tools_archive" | sha256sum --check
-  tar -xzf "$tools_archive" -C "${crane%/*}" crane
-  rm "$tools_archive"
-fi
 # crane's Docker archive reader accepts an uncompressed tar file.
 tarball="$RUNNER_TEMP/publish-image.tar"
 trap 'rm -f "$tarball"' EXIT

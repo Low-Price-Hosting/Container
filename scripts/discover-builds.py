@@ -188,7 +188,11 @@ def release_published(targets):
         os_version = os_versions.pop()
         if os_version and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]*', os_version):
             tags.add(os_version)
-    return all(registry_digest(repository + ':' + tag) == expected_digest for tag in sorted(tags))
+    docker_repository = 'docker.io/lphllc/' + targets[0]['distribution'].lower()
+    # Backfill Docker Hub from immutable, tested GHCR records when its index or aliases
+    # are missing/outdated. This queues publication without rebuilding unchanged images.
+    return all(registry_digest(destination + ':' + tag) == expected_digest
+               for destination in (repository, docker_repository) for tag in sorted(tags))
 
 
 def release_matrix(plan, verify_only=False):
