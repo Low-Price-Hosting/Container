@@ -3,7 +3,7 @@
 set -euo pipefail
 dnf -y --enablerepo=crb install \
   python3 python3-pip python3-lxml python3-pyyaml python3-requests \
-  buildah skopeo rsync file lsof mtools openssl tar xz gzip zstd \
+  buildah skopeo rsync file lsof mtools ncurses openssl tar xz gzip zstd \
   util-linux attr policycoreutils microdnf
 python3 -m venv --system-site-packages /opt/kiwi
 /opt/kiwi/bin/python -m pip install --only-binary=:all: --no-deps --require-hashes \
@@ -12,3 +12,6 @@ python3 -m venv --system-site-packages /opt/kiwi
   -r /build-tools/rockylinux/kiwi-source.txt
 /opt/kiwi/bin/python -m pip check
 /opt/kiwi/bin/python -c 'from importlib.metadata import version; assert version("kiwi") == "11.1.1"; print("Installed upstream KIWI " + version("kiwi"))'
+# Distribution KIWI RPMs configure their OCI backend; the upstream Python
+# installation defaults to umoci. Use the native tools installed above.
+printf '%s\n' 'oci:' '  archive_tool: buildah' > /etc/kiwi.yml
