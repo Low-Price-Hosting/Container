@@ -11,4 +11,4 @@ python3 -m venv --system-site-packages /opt/kiwi
 /opt/kiwi/bin/python -m pip install --no-deps --no-build-isolation --require-hashes \
   -r /build-tools/rockylinux/kiwi-source.txt
 /opt/kiwi/bin/python -m pip check
-/opt/kiwi/bin/kiwi-ng --version
+/opt/kiwi/bin/python -c 'from importlib.metadata import version; assert version("kiwi") == "11.1.1"; print("Installed upstream KIWI " + version("kiwi"))'
