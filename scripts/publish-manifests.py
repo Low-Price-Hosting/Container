@@ -22,6 +22,31 @@ IMAGE_TYPES = {'application/vnd.oci.image.manifest.v1+json',
 TAG_PATTERN = r'[A-Za-z0-9_][A-Za-z0-9._-]{0,127}'
 
 
+def quay_repository(distribution):
+    account = os.environ.get('QUAY_NAME', '')
+    if not re.fullmatch(r'[a-z0-9][a-z0-9_-]*(?:\+[a-z0-9][a-z0-9_-]*)?', account):
+        raise ValueError('QUAY_NAME must be a lowercase Quay username or organization+robot account')
+    namespace = account.split('+', 1)[0]
+    name = distribution.lower()
+    if not re.fullmatch(r'[a-z0-9]+', name):
+        raise ValueError('Invalid Quay distribution repository name')
+    return 'quay.io/' + namespace + '/' + name
+
+
+def require_public_quay_repository(repository):
+    name = repository.removeprefix('quay.io/')
+    url = 'https://quay.io/api/v1/repository/' + name + '?includeTags=false'
+    message = (f'Quay repository must exist and be public: https://quay.io/repository/{name}. '
+               'Create a Public repository (or make the existing repository public) and grant the token account Write access.')
+    try:
+        body, _ = registry_request(urllib.request.Request(url))
+        metadata = json.loads(body)
+    except Exception as error:
+        raise RuntimeError(message + ' ' + str(error)) from None
+    if metadata.get('is_public') is not True:
+        raise RuntimeError(message)
+
+
 def scoped_plan(plan, distribution, version):
     return dict(include=[t for t in plan['include'] if t['distribution'] == distribution and t['version'] == version],
                 errors=[e for e in plan.get('errors', []) if e['distribution'] == distribution
@@ -112,6 +137,10 @@ def publish_index(repository, tags, index):
         name = repository.removeprefix('docker.io/')
         registry, service, token_url = 'registry-1.docker.io', 'registry.docker.io', 'https://auth.docker.io/token'
         username, password = os.environ.get('DOCKER_USERNAME') or 'lphllc', os.environ['DOCKER_SECRET']
+    elif repository.startswith('quay.io/') and repository == quay_repository(repository.rsplit('/', 1)[1]):
+        name = repository.removeprefix('quay.io/')
+        registry, service, token_url = 'quay.io', 'quay.io', 'https://quay.io/v2/auth'
+        username, password = os.environ['QUAY_NAME'], os.environ['QUAY_SECRET']
     else:
         raise ValueError(f'Unexpected release repository: {repository}')
     credentials = base64.b64encode((username + ':' + password).encode()).decode()
@@ -166,17 +195,23 @@ def publish(plan, directory, validate_only=False):
         try:
             repository, tags, index = release_index(distribution, version, targets, approved)
             docker_repository = 'docker.io/lphllc/' + distribution.lower()
+            quay_destination = quay_repository(distribution)
+            # Quay can automatically create private repositories when issuing a push
+            # token. Check public visibility anonymously before any push-scoped call.
+            require_public_quay_repository(quay_destination)
             # Reused GHCR records carry the same tested approval as newly built records.
             # Copy immutable child manifests, including their blobs, without rebuilding.
             for target in targets:
                 source = approved[target['key']]['image']
-                destination = docker_repository + '@' + approved[target['key']]['descriptor']['digest']
-                subprocess.run(['bash', str(pathlib.Path(__file__).with_name('push-images.sh')),
-                                '--copy', source, destination], check=True)
+                for destination in (docker_repository, quay_destination):
+                    image = destination + '@' + approved[target['key']]['descriptor']['digest']
+                    subprocess.run(['bash', str(pathlib.Path(__file__).with_name('push-images.sh')),
+                                    '--copy', source, image], check=True)
             # Identical index bytes preserve variants, tested fingerprints and OCI labels.
             publish_index(repository, tags, index)
             publish_index(docker_repository, tags, index)
-            statuses.append((distribution, version, len(approved), len(targets), 'Published: GHCR + Docker Hub'))
+            publish_index(quay_destination, tags, index)
+            statuses.append((distribution, version, len(approved), len(targets), 'Published: GHCR + Docker Hub + Quay'))
         except Exception as error:
             failures.append(dict(distribution=distribution, version=version, error=str(error)))
             statuses.append((distribution, version, len(approved), len(targets), 'Publish failed'))

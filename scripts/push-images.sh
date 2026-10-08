@@ -17,7 +17,14 @@ if [[ "${1:-}" == --copy ]]; then
   source=$2
   destination=$3
   [[ "$source" =~ ^ghcr\.io/low-price-hosting/[a-z0-9]+@sha256:[a-f0-9]{64}$ ]]
-  [[ "$destination" == "docker.io/lphllc/${source#ghcr.io/low-price-hosting/}" ]]
+  registry='Docker Hub'
+  if [[ "$destination" != "docker.io/lphllc/${source#ghcr.io/low-price-hosting/}" ]]; then
+    quay_account=${QUAY_NAME:-}
+    [[ "$quay_account" =~ ^[a-z0-9][a-z0-9_-]*(\+[a-z0-9][a-z0-9_-]*)?$ ]]
+    quay_namespace=${quay_account%%+*}
+    [[ "$destination" == "quay.io/$quay_namespace/${source#ghcr.io/low-price-hosting/}" ]]
+    registry='Quay'
+  fi
   digest=${source##*@}
   # The caller validates the complete release's tested descriptors before copying.
   for attempt in 1 2 3; do
@@ -25,7 +32,7 @@ if [[ "${1:-}" == --copy ]]; then
       break
     fi
     ((attempt < 3)) || exit 1
-    echo "Docker Hub copy failed; retrying ($attempt/3)" >&2
+    echo "$registry copy failed; retrying ($attempt/3)" >&2
     sleep $((attempt * 5))
   done
   [[ "$("$crane" digest "$destination")" == "$digest" ]]

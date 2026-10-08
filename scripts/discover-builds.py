@@ -16,6 +16,9 @@ REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 spec = importlib.util.spec_from_file_location('repository_metadata', REPO_ROOT / 'scripts/repository-metadata.py')
 metadata = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(metadata)
+spec = importlib.util.spec_from_file_location('publication', REPO_ROOT / 'scripts/publish-manifests.py')
+publication = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(publication)
 
 DISTRIBUTIONS = ('Ubuntu', 'Debian', 'Centos', 'Alpine', 'Fedora', 'AlmaLinux', 'ArchLinux', 'RockyLinux')
 
@@ -189,10 +192,11 @@ def release_published(targets):
         if os_version and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]*', os_version):
             tags.add(os_version)
     docker_repository = 'docker.io/lphllc/' + targets[0]['distribution'].lower()
-    # Backfill Docker Hub from immutable, tested GHCR records when its index or aliases
+    quay_repository = publication.quay_repository(targets[0]['distribution'])
+    # Backfill registries from immutable, tested GHCR records when indexes or aliases
     # are missing/outdated. This queues publication without rebuilding unchanged images.
     return all(registry_digest(destination + ':' + tag) == expected_digest
-               for destination in (repository, docker_repository) for tag in sorted(tags))
+               for destination in (repository, docker_repository, quay_repository) for tag in sorted(tags))
 
 
 def release_matrix(plan, verify_only=False):
