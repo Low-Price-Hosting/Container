@@ -14,15 +14,17 @@
 
 # Low-Price-Hosting · Container
 
-**ایمیج‌های پایهٔ کانتینر Linux — ساخت از دستورهای منبع، آزمون برای هر معماری و انتشار در GHCR.**
+**ایمیج‌های پایهٔ کانتینر Linux — ساخت از دستورهای منبع، آزمون برای هر معماری و انتشار در GHCR، Docker Hub و Quay.**
 
 [![وضعیت ساخت](https://github.com/Low-Price-Hosting/Container/actions/workflows/build-base-images.yml/badge.svg?branch=main)](https://github.com/Low-Price-Hosting/Container/actions/workflows/build-base-images.yml)
 [![به‌روزرسانی منابع](https://github.com/Low-Price-Hosting/Cron/actions/workflows/mirror-container-sources.yml/badge.svg?branch=main)](https://github.com/Low-Price-Hosting/Cron/actions/workflows/mirror-container-sources.yml)
 [![رجیستری: GHCR](https://img.shields.io/badge/registry-GHCR-0969da?style=flat-square)](https://github.com/orgs/Low-Price-Hosting/packages?ecosystem=container)
+[![رجیستری: Docker Hub](https://img.shields.io/badge/registry-Docker_Hub-2496ed?style=flat-square)](https://hub.docker.com/u/lphllc)
+[![رجیستری: Quay](https://img.shields.io/badge/registry-Quay-ee0000?style=flat-square)](https://quay.io/organization/lowpricehosting)
 
 **8 توزیع** · **نسخه‌ها و معماری‌های پویا** · **ساخت → آزمون → انتشار**
 
-[ایمیج‌ها](#images-and-downloads) · [معماری‌ها](#versions-and-architectures) · [استفاده](#quick-start) · [شروع ساخت](#run-builds) · [روند ساخت](#pipeline) · [اطلاعات ایمیج](#oci-metadata)
+[ایمیج‌ها](#images-and-downloads) · [معماری‌ها](#versions-and-architectures) · [استفاده](#quick-start) · [شروع ساخت](#run-builds) · [اطلاعات ایمیج](#oci-metadata)
 
 ---
 
@@ -30,18 +32,24 @@
 
 ## ایمیج‌ها و دانلودها
 
-| توزیع | مرجع ایمیج | برچسب‌ها و OS/Arch | مجموع دانلودها |
+| توزیع | GHCR | Docker Hub | Quay |
 |---|---|---|---|
-| [Ubuntu](https://github.com/Low-Price-Hosting/Ubuntu) | `ghcr.io/low-price-hosting/ubuntu` | [بسته‌ها](https://github.com/orgs/Low-Price-Hosting/packages/container/package/ubuntu) | [![شمار دانلودهای ubuntu از GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Fubuntu&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/ubuntu) |
-| [Debian](https://github.com/Low-Price-Hosting/Debian) | `ghcr.io/low-price-hosting/debian` | [بسته‌ها](https://github.com/orgs/Low-Price-Hosting/packages/container/package/debian) | [![شمار دانلودهای debian از GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Fdebian&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/debian) |
-| [CentOS Stream](https://github.com/Low-Price-Hosting/Centos) | `ghcr.io/low-price-hosting/centos` | [بسته‌ها](https://github.com/orgs/Low-Price-Hosting/packages/container/package/centos) | [![شمار دانلودهای centos از GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Fcentos&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/centos) |
-| [Alpine](https://github.com/Low-Price-Hosting/Alpine) | `ghcr.io/low-price-hosting/alpine` | [بسته‌ها](https://github.com/orgs/Low-Price-Hosting/packages/container/package/alpine) | [![شمار دانلودهای alpine از GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Falpine&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/alpine) |
-| [Fedora](https://github.com/Low-Price-Hosting/Fedora) | `ghcr.io/low-price-hosting/fedora` | [بسته‌ها](https://github.com/orgs/Low-Price-Hosting/packages/container/package/fedora) | [![شمار دانلودهای fedora از GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Ffedora&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/fedora) |
-| [AlmaLinux](https://github.com/Low-Price-Hosting/AlmaLinux) | `ghcr.io/low-price-hosting/almalinux` | [بسته‌ها](https://github.com/orgs/Low-Price-Hosting/packages/container/package/almalinux) | [![شمار دانلودهای almalinux از GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Falmalinux&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/almalinux) |
-| [Arch Linux](https://github.com/Low-Price-Hosting/ArchLinux) | `ghcr.io/low-price-hosting/archlinux` | [بسته‌ها](https://github.com/orgs/Low-Price-Hosting/packages/container/package/archlinux) | [![شمار دانلودهای archlinux از GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Farchlinux&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/archlinux) |
-| [Rocky Linux](https://github.com/Low-Price-Hosting/RockyLinux) | `ghcr.io/low-price-hosting/rockylinux` | [بسته‌ها](https://github.com/orgs/Low-Price-Hosting/packages/container/package/rockylinux) | [![شمار دانلودهای rockylinux از GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Frockylinux&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/rockylinux) |
+| [Ubuntu](https://github.com/Low-Price-Hosting/Ubuntu) | [![شمار دانلودهای ubuntu از GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Fubuntu&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square&cacheSeconds=300)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/ubuntu) | [![ubuntu Docker Hub pulls](https://img.shields.io/docker/pulls/lphllc/ubuntu?label=Docker%20pulls&style=flat-square)](https://hub.docker.com/r/lphllc/ubuntu) | [![ubuntu Quay architectures](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fquay.io%2Fapi%2Fv1%2Frepository%2Flowpricehosting%2Fubuntu%2Ftag%2F%3FspecificTag%3Dlatest%26onlyActiveTags%3Dtrue&query=%24.tags%5B0%5D.child_manifest_count&label=Quay%20architectures&color=ee0000&style=flat-square&cacheSeconds=300)](https://quay.io/repository/lowpricehosting/ubuntu?tab=tags) |
+| [Debian](https://github.com/Low-Price-Hosting/Debian) | [![شمار دانلودهای debian از GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Fdebian&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square&cacheSeconds=300)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/debian) | [![debian Docker Hub pulls](https://img.shields.io/docker/pulls/lphllc/debian?label=Docker%20pulls&style=flat-square)](https://hub.docker.com/r/lphllc/debian) | [![debian Quay architectures](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fquay.io%2Fapi%2Fv1%2Frepository%2Flowpricehosting%2Fdebian%2Ftag%2F%3FspecificTag%3Dlatest%26onlyActiveTags%3Dtrue&query=%24.tags%5B0%5D.child_manifest_count&label=Quay%20architectures&color=ee0000&style=flat-square&cacheSeconds=300)](https://quay.io/repository/lowpricehosting/debian?tab=tags) |
+| [CentOS Stream](https://github.com/Low-Price-Hosting/Centos) | [![شمار دانلودهای centos از GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Fcentos&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square&cacheSeconds=300)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/centos) | [![centos Docker Hub pulls](https://img.shields.io/docker/pulls/lphllc/centos?label=Docker%20pulls&style=flat-square)](https://hub.docker.com/r/lphllc/centos) | [![centos Quay architectures](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fquay.io%2Fapi%2Fv1%2Frepository%2Flowpricehosting%2Fcentos%2Ftag%2F%3FspecificTag%3Dlatest%26onlyActiveTags%3Dtrue&query=%24.tags%5B0%5D.child_manifest_count&label=Quay%20architectures&color=ee0000&style=flat-square&cacheSeconds=300)](https://quay.io/repository/lowpricehosting/centos?tab=tags) |
+| [Alpine](https://github.com/Low-Price-Hosting/Alpine) | [![شمار دانلودهای alpine از GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Falpine&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square&cacheSeconds=300)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/alpine) | [![alpine Docker Hub pulls](https://img.shields.io/docker/pulls/lphllc/alpine?label=Docker%20pulls&style=flat-square)](https://hub.docker.com/r/lphllc/alpine) | [![alpine Quay architectures](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fquay.io%2Fapi%2Fv1%2Frepository%2Flowpricehosting%2Falpine%2Ftag%2F%3FspecificTag%3Dlatest%26onlyActiveTags%3Dtrue&query=%24.tags%5B0%5D.child_manifest_count&label=Quay%20architectures&color=ee0000&style=flat-square&cacheSeconds=300)](https://quay.io/repository/lowpricehosting/alpine?tab=tags) |
+| [Fedora](https://github.com/Low-Price-Hosting/Fedora) | [![شمار دانلودهای fedora از GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Ffedora&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square&cacheSeconds=300)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/fedora) | [![fedora Docker Hub pulls](https://img.shields.io/docker/pulls/lphllc/fedora?label=Docker%20pulls&style=flat-square)](https://hub.docker.com/r/lphllc/fedora) | [![fedora Quay architectures](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fquay.io%2Fapi%2Fv1%2Frepository%2Flowpricehosting%2Ffedora%2Ftag%2F%3FspecificTag%3Dlatest%26onlyActiveTags%3Dtrue&query=%24.tags%5B0%5D.child_manifest_count&label=Quay%20architectures&color=ee0000&style=flat-square&cacheSeconds=300)](https://quay.io/repository/lowpricehosting/fedora?tab=tags) |
+| [AlmaLinux](https://github.com/Low-Price-Hosting/AlmaLinux) | [![شمار دانلودهای almalinux از GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Falmalinux&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square&cacheSeconds=300)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/almalinux) | [![almalinux Docker Hub pulls](https://img.shields.io/docker/pulls/lphllc/almalinux?label=Docker%20pulls&style=flat-square)](https://hub.docker.com/r/lphllc/almalinux) | [![almalinux Quay architectures](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fquay.io%2Fapi%2Fv1%2Frepository%2Flowpricehosting%2Falmalinux%2Ftag%2F%3FspecificTag%3Dlatest%26onlyActiveTags%3Dtrue&query=%24.tags%5B0%5D.child_manifest_count&label=Quay%20architectures&color=ee0000&style=flat-square&cacheSeconds=300)](https://quay.io/repository/lowpricehosting/almalinux?tab=tags) |
+| [Arch Linux](https://github.com/Low-Price-Hosting/ArchLinux) | [![شمار دانلودهای archlinux از GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Farchlinux&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square&cacheSeconds=300)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/archlinux) | [![archlinux Docker Hub pulls](https://img.shields.io/docker/pulls/lphllc/archlinux?label=Docker%20pulls&style=flat-square)](https://hub.docker.com/r/lphllc/archlinux) | [![archlinux Quay architectures](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fquay.io%2Fapi%2Fv1%2Frepository%2Flowpricehosting%2Farchlinux%2Ftag%2F%3FspecificTag%3Dlatest%26onlyActiveTags%3Dtrue&query=%24.tags%5B0%5D.child_manifest_count&label=Quay%20architectures&color=ee0000&style=flat-square&cacheSeconds=300)](https://quay.io/repository/lowpricehosting/archlinux?tab=tags) |
+| [Rocky Linux](https://github.com/Low-Price-Hosting/RockyLinux) | [![شمار دانلودهای rockylinux از GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Frockylinux&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square&cacheSeconds=300)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/rockylinux) | [![rockylinux Docker Hub pulls](https://img.shields.io/docker/pulls/lphllc/rockylinux?label=Docker%20pulls&style=flat-square)](https://hub.docker.com/r/lphllc/rockylinux) | [![rockylinux Quay architectures](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fquay.io%2Fapi%2Fv1%2Frepository%2Flowpricehosting%2Frockylinux%2Ftag%2F%3FspecificTag%3Dlatest%26onlyActiveTags%3Dtrue&query=%24.tags%5B0%5D.child_manifest_count&label=Quay%20architectures&color=ee0000&style=flat-square&cacheSeconds=300)](https://quay.io/repository/lowpricehosting/rockylinux?tab=tags) |
 
-نشان‌های دانلود، مقدار **مجموع دانلودها** در GitHub Packages را نشان می‌دهند. دانلودهای هر نسخه و معماری‌های منتشرشده در صفحهٔ بستهٔ مربوطه قرار دارند. به‌دلیل حافظهٔ نهان، شمارنده‌ها ممکن است با تأخیر به‌روز شوند؛ خوانده نشدن شمارنده به معنی **0** نیست.
+نشان‌های GHCR و Docker Hub مجموع دانلودها را نشان می‌دهند؛ نشان Quay تعداد معماری‌های برچسب `latest` را نمایش می‌دهد. برای مشاهدهٔ برچسب‌ها و معماری‌ها روی نشان‌ها کلیک کنید. شمارنده‌ها مخصوص هر رجیستری هستند؛ به‌دلیل حافظهٔ نهان، به‌روزرسانی‌ها ممکن است با تأخیر نمایش داده شوند.
+
+```bash
+docker pull ghcr.io/low-price-hosting/ubuntu:latest
+docker pull docker.io/lphllc/ubuntu:latest
+docker pull quay.io/lowpricehosting/ubuntu:latest
+```
 
 <a id="versions-and-architectures"></a>
 
@@ -62,28 +70,28 @@
 | Arch Linux | `rolling` | `amd64` |
 | Rocky Linux | `8` | `amd64`, `arm64` |
 | Rocky Linux | `9` | `amd64`, `arm64`, `ppc64le`, `s390x` |
-| Rocky Linux | `10` | `amd64`, `arm64`, `ppc64le`, `riscv64`*, `s390x` |
+| Rocky Linux | `10` | `amd64`, `arm64`, `ppc64le`, `riscv64`, `s390x` |
 
-\* هدف Rocky Linux 10 `riscv64` در این برنامه از ساخت کنار گذاشته شد. مجموعهٔ معماری‌ها ممکن است بسته به نسخه متفاوت باشد.
+مجموعهٔ معماری‌ها ممکن است بسته به نسخه متفاوت باشد.
 
 معماری‌های واقعی یک برچسب را بررسی کنید:
 
 ```bash
-docker buildx imagetools inspect ghcr.io/low-price-hosting/ubuntu:24.04
-docker buildx imagetools inspect --raw ghcr.io/low-price-hosting/ubuntu:24.04
+docker buildx imagetools inspect ghcr.io/low-price-hosting/ubuntu:latest
+docker buildx imagetools inspect --raw ghcr.io/low-price-hosting/ubuntu:latest
 ```
 
 <a id="quick-start"></a>
 
 ## استفادهٔ سریع
 
-به‌جای `24.04` در مثال‌ها، **برچسب منتشرشده‌ای** را که می‌خواهید استفاده کنید انتخاب کنید. برای دانلود ایمیج‌های عمومی نیازی به ورود به GHCR نیست.
+به‌جای `latest` در مثال‌ها، **برچسب منتشرشده‌ای** را که می‌خواهید استفاده کنید انتخاب کنید. برای دانلود ایمیج‌های عمومی نیازی به ورود به GHCR نیست.
 
 ### دانلود و اجرا
 
 ```bash
-docker pull ghcr.io/low-price-hosting/ubuntu:24.04
-docker run --rm -it ghcr.io/low-price-hosting/ubuntu:24.04 /bin/sh
+docker pull ghcr.io/low-price-hosting/ubuntu:latest
+docker run --rm -it ghcr.io/low-price-hosting/ubuntu:latest /bin/sh
 ```
 
 Docker از برچسب چندمعماری، ایمیج مناسب معماری رایانهٔ شما را انتخاب می‌کند.
@@ -91,10 +99,10 @@ Docker از برچسب چندمعماری، ایمیج مناسب معماری �
 ### انتخاب معماری
 
 ```bash
-docker pull --platform linux/arm64 ghcr.io/low-price-hosting/ubuntu:24.04
+docker pull --platform linux/arm64 ghcr.io/low-price-hosting/ubuntu:latest
 
 docker run --rm --platform linux/arm64 \
-  ghcr.io/low-price-hosting/ubuntu:24.04 \
+  ghcr.io/low-price-hosting/ubuntu:latest \
   /bin/sh -c 'cat /etc/os-release'
 ```
 
@@ -104,7 +112,7 @@ docker run --rm --platform linux/arm64 \
 
 ```bash
 docker image inspect --format '{{json .RepoDigests}}' \
-  ghcr.io/low-price-hosting/ubuntu:24.04
+  ghcr.io/low-price-hosting/ubuntu:latest
 
 # به‌جای <digest> مقدار SHA256 ایمیج را بنویسید.
 docker pull ghcr.io/low-price-hosting/ubuntu@sha256:<digest>
@@ -115,7 +123,7 @@ docker pull ghcr.io/low-price-hosting/ubuntu@sha256:<digest>
 ### استفاده در ایمیج خودتان
 
 ```dockerfile
-FROM ghcr.io/low-price-hosting/ubuntu:24.04
+FROM ghcr.io/low-price-hosting/ubuntu:latest
 
 COPY app/ /opt/app/
 WORKDIR /opt/app
@@ -150,28 +158,6 @@ gh workflow run build-base-images.yml \
 
 نشان ساخت در بالا، نتیجهٔ آخرین گردش کار را نشان می‌دهد؛ اجرایی که فقط برای اعتبارسنجی باشد، ایمیجی منتشر نمی‌کند.
 
-<a id="pipeline"></a>
-
-## روند ساخت
-
-```mermaid
-flowchart LR
-    D["شناسایی نسخه و معماری"] --> B["ساخت"]
-    B --> T["آزمون"]
-    T --> P["انتشار"]
-    P --> G["ایمیج چندمعماری GHCR"]
-```
-
-| مرحله | عملیات انجام‌شده برای ایمیج |
-|---|---|
-| **ساخت** | سامانهٔ فایل ریشه/ایمیج با دستور ساخت کانتینر آن توزیع ایجاد می‌شود. |
-| **آزمون** | ایمیج روی اجراکننده‌ای جداگانه اجرا می‌شود؛ شناسهٔ توزیع، مدیر بسته، معماری و برچسب منبع بررسی می‌شوند. |
-| **انتشار** | پس از موفقیت همهٔ معماری‌های مورد انتظار یک نسخه در آزمون، برچسب نسخهٔ چندمعماری منتشر می‌شود. |
-
-هر هدف ساخت و آزمون از اجراکننده‌ای جداگانه استفاده می‌کند. آزمون‌ها بررسی‌های پایهٔ عملکرد هستند؛ آزمون جامع سازگاری برنامه‌ها نیستند.
-
-نسخه‌ها و معماری‌های جدید به‌طور خودکار از فهرست‌های منابع شناسایی می‌شوند. وقتی دستور مربوطه، شاخهٔ منبع، مانیفست راه‌اندازی اولیه و مخزن‌های بسته آماده باشند، به برنامهٔ ساخت اضافه می‌شوند. منابع از طریق گردش کار ساعتی Cron به‌روز می‌شوند؛ زمان‌بندی GitHub ممکن است با تأخیر اجرا شود.
-
 <a id="oci-metadata"></a>
 
 ## برچسب‌ها و اطلاعات ایمیج
@@ -186,7 +172,7 @@ flowchart LR
 
 ```bash
 docker image inspect --format '{{json .Config.Labels}}' \
-  ghcr.io/low-price-hosting/ubuntu:24.04
+  ghcr.io/low-price-hosting/ubuntu:latest
 ```
 
 `org.opencontainers.image.source` مخزن دستور منبع، `org.opencontainers.image.version` نسخه و `io.low-price-hosting.build.source` کد ساخت را نشان می‌دهد. نمایهٔ چندمعماری و توضیحات معماری‌ها با `docker buildx imagetools inspect --raw` قابل خواندن هستند.

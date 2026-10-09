@@ -14,15 +14,17 @@
 
 # Low-Price-Hosting · Container
 
-**Linux 基礎容器映像 — 依原始碼建置配方產生，按架構測試，並發布至 GHCR。**
+**Linux 基礎容器映像 — 依原始碼建置配方產生，按架構測試，並發布至 GHCR、Docker Hub 和 Quay。**
 
 [![建置狀態](https://github.com/Low-Price-Hosting/Container/actions/workflows/build-base-images.yml/badge.svg?branch=main)](https://github.com/Low-Price-Hosting/Container/actions/workflows/build-base-images.yml)
 [![原始碼更新](https://github.com/Low-Price-Hosting/Cron/actions/workflows/mirror-container-sources.yml/badge.svg?branch=main)](https://github.com/Low-Price-Hosting/Cron/actions/workflows/mirror-container-sources.yml)
 [![映像倉庫：GHCR](https://img.shields.io/badge/registry-GHCR-0969da?style=flat-square)](https://github.com/orgs/Low-Price-Hosting/packages?ecosystem=container)
+[![映像倉庫：Docker Hub](https://img.shields.io/badge/registry-Docker_Hub-2496ed?style=flat-square)](https://hub.docker.com/u/lphllc)
+[![映像倉庫：Quay](https://img.shields.io/badge/registry-Quay-ee0000?style=flat-square)](https://quay.io/organization/lowpricehosting)
 
 **8 個發行版** · **動態版本與架構** · **建置 → 測試 → 發布**
 
-[映像](#images-and-downloads) · [架構](#versions-and-architectures) · [使用方式](#quick-start) · [啟動建置](#run-builds) · [建置流程](#pipeline) · [映像資訊](#oci-metadata)
+[映像](#images-and-downloads) · [架構](#versions-and-architectures) · [使用方式](#quick-start) · [啟動建置](#run-builds) · [映像資訊](#oci-metadata)
 
 ---
 
@@ -30,18 +32,24 @@
 
 ## 映像與下載量
 
-| 發行版 | 映像參照 | 標籤與 OS/Arch | 總下載量 |
+| 發行版 | GHCR | Docker Hub | Quay |
 |---|---|---|---|
-| [Ubuntu](https://github.com/Low-Price-Hosting/Ubuntu) | `ghcr.io/low-price-hosting/ubuntu` | [套件](https://github.com/orgs/Low-Price-Hosting/packages/container/package/ubuntu) | [![ubuntu GHCR 下載次數](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Fubuntu&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/ubuntu) |
-| [Debian](https://github.com/Low-Price-Hosting/Debian) | `ghcr.io/low-price-hosting/debian` | [套件](https://github.com/orgs/Low-Price-Hosting/packages/container/package/debian) | [![debian GHCR 下載次數](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Fdebian&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/debian) |
-| [CentOS Stream](https://github.com/Low-Price-Hosting/Centos) | `ghcr.io/low-price-hosting/centos` | [套件](https://github.com/orgs/Low-Price-Hosting/packages/container/package/centos) | [![centos GHCR 下載次數](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Fcentos&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/centos) |
-| [Alpine](https://github.com/Low-Price-Hosting/Alpine) | `ghcr.io/low-price-hosting/alpine` | [套件](https://github.com/orgs/Low-Price-Hosting/packages/container/package/alpine) | [![alpine GHCR 下載次數](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Falpine&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/alpine) |
-| [Fedora](https://github.com/Low-Price-Hosting/Fedora) | `ghcr.io/low-price-hosting/fedora` | [套件](https://github.com/orgs/Low-Price-Hosting/packages/container/package/fedora) | [![fedora GHCR 下載次數](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Ffedora&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/fedora) |
-| [AlmaLinux](https://github.com/Low-Price-Hosting/AlmaLinux) | `ghcr.io/low-price-hosting/almalinux` | [套件](https://github.com/orgs/Low-Price-Hosting/packages/container/package/almalinux) | [![almalinux GHCR 下載次數](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Falmalinux&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/almalinux) |
-| [Arch Linux](https://github.com/Low-Price-Hosting/ArchLinux) | `ghcr.io/low-price-hosting/archlinux` | [套件](https://github.com/orgs/Low-Price-Hosting/packages/container/package/archlinux) | [![archlinux GHCR 下載次數](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Farchlinux&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/archlinux) |
-| [Rocky Linux](https://github.com/Low-Price-Hosting/RockyLinux) | `ghcr.io/low-price-hosting/rockylinux` | [套件](https://github.com/orgs/Low-Price-Hosting/packages/container/package/rockylinux) | [![rockylinux GHCR 下載次數](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Frockylinux&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/rockylinux) |
+| [Ubuntu](https://github.com/Low-Price-Hosting/Ubuntu) | [![ubuntu GHCR 下載次數](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Fubuntu&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square&cacheSeconds=300)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/ubuntu) | [![ubuntu Docker Hub pulls](https://img.shields.io/docker/pulls/lphllc/ubuntu?label=Docker%20pulls&style=flat-square)](https://hub.docker.com/r/lphllc/ubuntu) | [![ubuntu Quay architectures](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fquay.io%2Fapi%2Fv1%2Frepository%2Flowpricehosting%2Fubuntu%2Ftag%2F%3FspecificTag%3Dlatest%26onlyActiveTags%3Dtrue&query=%24.tags%5B0%5D.child_manifest_count&label=Quay%20architectures&color=ee0000&style=flat-square&cacheSeconds=300)](https://quay.io/repository/lowpricehosting/ubuntu?tab=tags) |
+| [Debian](https://github.com/Low-Price-Hosting/Debian) | [![debian GHCR 下載次數](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Fdebian&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square&cacheSeconds=300)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/debian) | [![debian Docker Hub pulls](https://img.shields.io/docker/pulls/lphllc/debian?label=Docker%20pulls&style=flat-square)](https://hub.docker.com/r/lphllc/debian) | [![debian Quay architectures](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fquay.io%2Fapi%2Fv1%2Frepository%2Flowpricehosting%2Fdebian%2Ftag%2F%3FspecificTag%3Dlatest%26onlyActiveTags%3Dtrue&query=%24.tags%5B0%5D.child_manifest_count&label=Quay%20architectures&color=ee0000&style=flat-square&cacheSeconds=300)](https://quay.io/repository/lowpricehosting/debian?tab=tags) |
+| [CentOS Stream](https://github.com/Low-Price-Hosting/Centos) | [![centos GHCR 下載次數](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Fcentos&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square&cacheSeconds=300)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/centos) | [![centos Docker Hub pulls](https://img.shields.io/docker/pulls/lphllc/centos?label=Docker%20pulls&style=flat-square)](https://hub.docker.com/r/lphllc/centos) | [![centos Quay architectures](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fquay.io%2Fapi%2Fv1%2Frepository%2Flowpricehosting%2Fcentos%2Ftag%2F%3FspecificTag%3Dlatest%26onlyActiveTags%3Dtrue&query=%24.tags%5B0%5D.child_manifest_count&label=Quay%20architectures&color=ee0000&style=flat-square&cacheSeconds=300)](https://quay.io/repository/lowpricehosting/centos?tab=tags) |
+| [Alpine](https://github.com/Low-Price-Hosting/Alpine) | [![alpine GHCR 下載次數](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Falpine&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square&cacheSeconds=300)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/alpine) | [![alpine Docker Hub pulls](https://img.shields.io/docker/pulls/lphllc/alpine?label=Docker%20pulls&style=flat-square)](https://hub.docker.com/r/lphllc/alpine) | [![alpine Quay architectures](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fquay.io%2Fapi%2Fv1%2Frepository%2Flowpricehosting%2Falpine%2Ftag%2F%3FspecificTag%3Dlatest%26onlyActiveTags%3Dtrue&query=%24.tags%5B0%5D.child_manifest_count&label=Quay%20architectures&color=ee0000&style=flat-square&cacheSeconds=300)](https://quay.io/repository/lowpricehosting/alpine?tab=tags) |
+| [Fedora](https://github.com/Low-Price-Hosting/Fedora) | [![fedora GHCR 下載次數](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Ffedora&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square&cacheSeconds=300)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/fedora) | [![fedora Docker Hub pulls](https://img.shields.io/docker/pulls/lphllc/fedora?label=Docker%20pulls&style=flat-square)](https://hub.docker.com/r/lphllc/fedora) | [![fedora Quay architectures](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fquay.io%2Fapi%2Fv1%2Frepository%2Flowpricehosting%2Ffedora%2Ftag%2F%3FspecificTag%3Dlatest%26onlyActiveTags%3Dtrue&query=%24.tags%5B0%5D.child_manifest_count&label=Quay%20architectures&color=ee0000&style=flat-square&cacheSeconds=300)](https://quay.io/repository/lowpricehosting/fedora?tab=tags) |
+| [AlmaLinux](https://github.com/Low-Price-Hosting/AlmaLinux) | [![almalinux GHCR 下載次數](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Falmalinux&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square&cacheSeconds=300)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/almalinux) | [![almalinux Docker Hub pulls](https://img.shields.io/docker/pulls/lphllc/almalinux?label=Docker%20pulls&style=flat-square)](https://hub.docker.com/r/lphllc/almalinux) | [![almalinux Quay architectures](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fquay.io%2Fapi%2Fv1%2Frepository%2Flowpricehosting%2Falmalinux%2Ftag%2F%3FspecificTag%3Dlatest%26onlyActiveTags%3Dtrue&query=%24.tags%5B0%5D.child_manifest_count&label=Quay%20architectures&color=ee0000&style=flat-square&cacheSeconds=300)](https://quay.io/repository/lowpricehosting/almalinux?tab=tags) |
+| [Arch Linux](https://github.com/Low-Price-Hosting/ArchLinux) | [![archlinux GHCR 下載次數](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Farchlinux&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square&cacheSeconds=300)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/archlinux) | [![archlinux Docker Hub pulls](https://img.shields.io/docker/pulls/lphllc/archlinux?label=Docker%20pulls&style=flat-square)](https://hub.docker.com/r/lphllc/archlinux) | [![archlinux Quay architectures](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fquay.io%2Fapi%2Fv1%2Frepository%2Flowpricehosting%2Farchlinux%2Ftag%2F%3FspecificTag%3Dlatest%26onlyActiveTags%3Dtrue&query=%24.tags%5B0%5D.child_manifest_count&label=Quay%20architectures&color=ee0000&style=flat-square&cacheSeconds=300)](https://quay.io/repository/lowpricehosting/archlinux?tab=tags) |
+| [Rocky Linux](https://github.com/Low-Price-Hosting/RockyLinux) | [![rockylinux GHCR 下載次數](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Frockylinux&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square&cacheSeconds=300)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/rockylinux) | [![rockylinux Docker Hub pulls](https://img.shields.io/docker/pulls/lphllc/rockylinux?label=Docker%20pulls&style=flat-square)](https://hub.docker.com/r/lphllc/rockylinux) | [![rockylinux Quay architectures](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fquay.io%2Fapi%2Fv1%2Frepository%2Flowpricehosting%2Frockylinux%2Ftag%2F%3FspecificTag%3Dlatest%26onlyActiveTags%3Dtrue&query=%24.tags%5B0%5D.child_manifest_count&label=Quay%20architectures&color=ee0000&style=flat-square&cacheSeconds=300)](https://quay.io/repository/lowpricehosting/rockylinux?tab=tags) |
 
-下載徽章顯示 GitHub Packages 中的 **Total downloads（總下載量）**。各版本的下載量和已發布架構列於對應的套件頁面。快取可能導致計數延遲；無法讀取計數**不代表 0**。
+GHCR 和 Docker Hub 徽章顯示總下載次數；Quay 徽章顯示 `latest` 標籤的架構數量。點擊徽章可查看標籤與架構。計數器按映像倉庫服務分別統計，快取可能導致更新延遲。
+
+```bash
+docker pull ghcr.io/low-price-hosting/ubuntu:latest
+docker pull docker.io/lphllc/ubuntu:latest
+docker pull quay.io/lowpricehosting/ubuntu:latest
+```
 
 <a id="versions-and-architectures"></a>
 
@@ -62,28 +70,28 @@
 | Arch Linux | `rolling` | `amd64` |
 | Rocky Linux | `8` | `amd64`, `arm64` |
 | Rocky Linux | `9` | `amd64`, `arm64`, `ppc64le`, `s390x` |
-| Rocky Linux | `10` | `amd64`, `arm64`, `ppc64le`, `riscv64`*, `s390x` |
+| Rocky Linux | `10` | `amd64`, `arm64`, `ppc64le`, `riscv64`, `s390x` |
 
-\* 此計畫未將 Rocky Linux 10 的 `riscv64` 目標納入建置。架構集合可能因版本而異。
+架構集合可能因版本而異。
 
 檢查某個標籤實際包含的架構：
 
 ```bash
-docker buildx imagetools inspect ghcr.io/low-price-hosting/ubuntu:24.04
-docker buildx imagetools inspect --raw ghcr.io/low-price-hosting/ubuntu:24.04
+docker buildx imagetools inspect ghcr.io/low-price-hosting/ubuntu:latest
+docker buildx imagetools inspect --raw ghcr.io/low-price-hosting/ubuntu:latest
 ```
 
 <a id="quick-start"></a>
 
 ## 快速使用
 
-將範例中的 `24.04` 替換為您想使用的**已發布標籤**。下載公開映像無須登入 GHCR。
+將範例中的 `latest` 替換為您想使用的**已發布標籤**。下載公開映像無須登入 GHCR。
 
 ### 下載並執行
 
 ```bash
-docker pull ghcr.io/low-price-hosting/ubuntu:24.04
-docker run --rm -it ghcr.io/low-price-hosting/ubuntu:24.04 /bin/sh
+docker pull ghcr.io/low-price-hosting/ubuntu:latest
+docker run --rm -it ghcr.io/low-price-hosting/ubuntu:latest /bin/sh
 ```
 
 Docker 會從多架構標籤中選擇符合您電腦架構的映像。
@@ -91,10 +99,10 @@ Docker 會從多架構標籤中選擇符合您電腦架構的映像。
 ### 選擇架構
 
 ```bash
-docker pull --platform linux/arm64 ghcr.io/low-price-hosting/ubuntu:24.04
+docker pull --platform linux/arm64 ghcr.io/low-price-hosting/ubuntu:latest
 
 docker run --rm --platform linux/arm64 \
-  ghcr.io/low-price-hosting/ubuntu:24.04 \
+  ghcr.io/low-price-hosting/ubuntu:latest \
   /bin/sh -c 'cat /etc/os-release'
 ```
 
@@ -104,7 +112,7 @@ docker run --rm --platform linux/arm64 \
 
 ```bash
 docker image inspect --format '{{json .RepoDigests}}' \
-  ghcr.io/low-price-hosting/ubuntu:24.04
+  ghcr.io/low-price-hosting/ubuntu:latest
 
 # 將 <digest> 替換為映像的 SHA256 值。
 docker pull ghcr.io/low-price-hosting/ubuntu@sha256:<digest>
@@ -115,7 +123,7 @@ docker pull ghcr.io/low-price-hosting/ubuntu@sha256:<digest>
 ### 用於您自己的映像
 
 ```dockerfile
-FROM ghcr.io/low-price-hosting/ubuntu:24.04
+FROM ghcr.io/low-price-hosting/ubuntu:latest
 
 COPY app/ /opt/app/
 WORKDIR /opt/app
@@ -150,28 +158,6 @@ gh workflow run build-base-images.yml \
 
 上方的建置徽章顯示最近一次工作流程的結果；僅驗證的執行不會發布映像。
 
-<a id="pipeline"></a>
-
-## 建置流程
-
-```mermaid
-flowchart LR
-    D["版本與架構探索"] --> B["建置"]
-    B --> T["測試"]
-    T --> P["發布"]
-    P --> G["GHCR 多架構映像"]
-```
-
-| 階段 | 對映像執行的操作 |
-|---|---|
-| **建置** | 使用發行版的容器產生配方建立 rootfs/映像。 |
-| **測試** | 在獨立的執行器上執行映像；檢查發行版識別、套件管理器、架構和原始碼標籤。 |
-| **發布** | 某個版本的所有預期架構通過測試後，發布該版本的多架構標籤。 |
-
-每個建置/測試目標使用獨立的執行器。測試屬於基本執行檢查，並非完整的應用程式相容性測試。
-
-新版本與架構會從來源目錄清單中自動探索。相關配方、原始碼分支、引導映像清單及套件倉庫準備就緒後，目標才會加入建置計畫。原始碼透過每小時執行的 Cron 流程更新；GitHub 排程可能延遲。
-
 <a id="oci-metadata"></a>
 
 ## 標籤與映像資訊
@@ -186,7 +172,7 @@ flowchart LR
 
 ```bash
 docker image inspect --format '{{json .Config.Labels}}' \
-  ghcr.io/low-price-hosting/ubuntu:24.04
+  ghcr.io/low-price-hosting/ubuntu:latest
 ```
 
 `org.opencontainers.image.source` 指向原始碼配方倉庫，`org.opencontainers.image.version` 表示版本，`io.low-price-hosting.build.source` 指向產生程式碼。可透過 `docker buildx imagetools inspect --raw` 讀取多架構索引與架構註解。

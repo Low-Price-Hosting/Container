@@ -14,15 +14,17 @@
 
 # Low-Price-Hosting · Container
 
-**Ảnh container cơ sở Linux — xây dựng từ công thức nguồn, kiểm thử theo từng kiến trúc và phát hành lên GHCR.**
+**Ảnh container cơ sở Linux — xây dựng từ công thức nguồn, kiểm thử theo từng kiến trúc và phát hành lên GHCR, Docker Hub và Quay.**
 
 [![Trạng thái xây dựng](https://github.com/Low-Price-Hosting/Container/actions/workflows/build-base-images.yml/badge.svg?branch=main)](https://github.com/Low-Price-Hosting/Container/actions/workflows/build-base-images.yml)
 [![Cập nhật nguồn](https://github.com/Low-Price-Hosting/Cron/actions/workflows/mirror-container-sources.yml/badge.svg?branch=main)](https://github.com/Low-Price-Hosting/Cron/actions/workflows/mirror-container-sources.yml)
 [![Kho đăng ký: GHCR](https://img.shields.io/badge/registry-GHCR-0969da?style=flat-square)](https://github.com/orgs/Low-Price-Hosting/packages?ecosystem=container)
+[![Kho đăng ký: Docker Hub](https://img.shields.io/badge/registry-Docker_Hub-2496ed?style=flat-square)](https://hub.docker.com/u/lphllc)
+[![Kho đăng ký: Quay](https://img.shields.io/badge/registry-Quay-ee0000?style=flat-square)](https://quay.io/organization/lowpricehosting)
 
 **8 bản phân phối** · **Phiên bản và kiến trúc được xác định động** · **Xây dựng → Kiểm thử → Phát hành**
 
-[Ảnh](#images-and-downloads) · [Kiến trúc](#versions-and-architectures) · [Sử dụng](#quick-start) · [Khởi chạy bản dựng](#run-builds) · [Quy trình xây dựng](#pipeline) · [Thông tin ảnh](#oci-metadata)
+[Ảnh](#images-and-downloads) · [Kiến trúc](#versions-and-architectures) · [Sử dụng](#quick-start) · [Khởi chạy bản dựng](#run-builds) · [Thông tin ảnh](#oci-metadata)
 
 ---
 
@@ -30,18 +32,24 @@
 
 ## Ảnh và lượt tải xuống
 
-| Bản phân phối | Tham chiếu ảnh | Thẻ và OS/Arch | Tổng lượt tải xuống |
+| Bản phân phối | GHCR | Docker Hub | Quay |
 |---|---|---|---|
-| [Ubuntu](https://github.com/Low-Price-Hosting/Ubuntu) | `ghcr.io/low-price-hosting/ubuntu` | [Các gói](https://github.com/orgs/Low-Price-Hosting/packages/container/package/ubuntu) | [![Số lượt tải xuống ubuntu từ GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Fubuntu&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/ubuntu) |
-| [Debian](https://github.com/Low-Price-Hosting/Debian) | `ghcr.io/low-price-hosting/debian` | [Các gói](https://github.com/orgs/Low-Price-Hosting/packages/container/package/debian) | [![Số lượt tải xuống debian từ GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Fdebian&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/debian) |
-| [CentOS Stream](https://github.com/Low-Price-Hosting/Centos) | `ghcr.io/low-price-hosting/centos` | [Các gói](https://github.com/orgs/Low-Price-Hosting/packages/container/package/centos) | [![Số lượt tải xuống centos từ GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Fcentos&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/centos) |
-| [Alpine](https://github.com/Low-Price-Hosting/Alpine) | `ghcr.io/low-price-hosting/alpine` | [Các gói](https://github.com/orgs/Low-Price-Hosting/packages/container/package/alpine) | [![Số lượt tải xuống alpine từ GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Falpine&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/alpine) |
-| [Fedora](https://github.com/Low-Price-Hosting/Fedora) | `ghcr.io/low-price-hosting/fedora` | [Các gói](https://github.com/orgs/Low-Price-Hosting/packages/container/package/fedora) | [![Số lượt tải xuống fedora từ GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Ffedora&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/fedora) |
-| [AlmaLinux](https://github.com/Low-Price-Hosting/AlmaLinux) | `ghcr.io/low-price-hosting/almalinux` | [Các gói](https://github.com/orgs/Low-Price-Hosting/packages/container/package/almalinux) | [![Số lượt tải xuống almalinux từ GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Falmalinux&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/almalinux) |
-| [Arch Linux](https://github.com/Low-Price-Hosting/ArchLinux) | `ghcr.io/low-price-hosting/archlinux` | [Các gói](https://github.com/orgs/Low-Price-Hosting/packages/container/package/archlinux) | [![Số lượt tải xuống archlinux từ GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Farchlinux&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/archlinux) |
-| [Rocky Linux](https://github.com/Low-Price-Hosting/RockyLinux) | `ghcr.io/low-price-hosting/rockylinux` | [Các gói](https://github.com/orgs/Low-Price-Hosting/packages/container/package/rockylinux) | [![Số lượt tải xuống rockylinux từ GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Frockylinux&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/rockylinux) |
+| [Ubuntu](https://github.com/Low-Price-Hosting/Ubuntu) | [![Số lượt tải xuống ubuntu từ GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Fubuntu&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square&cacheSeconds=300)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/ubuntu) | [![ubuntu Docker Hub pulls](https://img.shields.io/docker/pulls/lphllc/ubuntu?label=Docker%20pulls&style=flat-square)](https://hub.docker.com/r/lphllc/ubuntu) | [![ubuntu Quay architectures](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fquay.io%2Fapi%2Fv1%2Frepository%2Flowpricehosting%2Fubuntu%2Ftag%2F%3FspecificTag%3Dlatest%26onlyActiveTags%3Dtrue&query=%24.tags%5B0%5D.child_manifest_count&label=Quay%20architectures&color=ee0000&style=flat-square&cacheSeconds=300)](https://quay.io/repository/lowpricehosting/ubuntu?tab=tags) |
+| [Debian](https://github.com/Low-Price-Hosting/Debian) | [![Số lượt tải xuống debian từ GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Fdebian&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square&cacheSeconds=300)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/debian) | [![debian Docker Hub pulls](https://img.shields.io/docker/pulls/lphllc/debian?label=Docker%20pulls&style=flat-square)](https://hub.docker.com/r/lphllc/debian) | [![debian Quay architectures](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fquay.io%2Fapi%2Fv1%2Frepository%2Flowpricehosting%2Fdebian%2Ftag%2F%3FspecificTag%3Dlatest%26onlyActiveTags%3Dtrue&query=%24.tags%5B0%5D.child_manifest_count&label=Quay%20architectures&color=ee0000&style=flat-square&cacheSeconds=300)](https://quay.io/repository/lowpricehosting/debian?tab=tags) |
+| [CentOS Stream](https://github.com/Low-Price-Hosting/Centos) | [![Số lượt tải xuống centos từ GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Fcentos&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square&cacheSeconds=300)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/centos) | [![centos Docker Hub pulls](https://img.shields.io/docker/pulls/lphllc/centos?label=Docker%20pulls&style=flat-square)](https://hub.docker.com/r/lphllc/centos) | [![centos Quay architectures](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fquay.io%2Fapi%2Fv1%2Frepository%2Flowpricehosting%2Fcentos%2Ftag%2F%3FspecificTag%3Dlatest%26onlyActiveTags%3Dtrue&query=%24.tags%5B0%5D.child_manifest_count&label=Quay%20architectures&color=ee0000&style=flat-square&cacheSeconds=300)](https://quay.io/repository/lowpricehosting/centos?tab=tags) |
+| [Alpine](https://github.com/Low-Price-Hosting/Alpine) | [![Số lượt tải xuống alpine từ GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Falpine&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square&cacheSeconds=300)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/alpine) | [![alpine Docker Hub pulls](https://img.shields.io/docker/pulls/lphllc/alpine?label=Docker%20pulls&style=flat-square)](https://hub.docker.com/r/lphllc/alpine) | [![alpine Quay architectures](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fquay.io%2Fapi%2Fv1%2Frepository%2Flowpricehosting%2Falpine%2Ftag%2F%3FspecificTag%3Dlatest%26onlyActiveTags%3Dtrue&query=%24.tags%5B0%5D.child_manifest_count&label=Quay%20architectures&color=ee0000&style=flat-square&cacheSeconds=300)](https://quay.io/repository/lowpricehosting/alpine?tab=tags) |
+| [Fedora](https://github.com/Low-Price-Hosting/Fedora) | [![Số lượt tải xuống fedora từ GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Ffedora&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square&cacheSeconds=300)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/fedora) | [![fedora Docker Hub pulls](https://img.shields.io/docker/pulls/lphllc/fedora?label=Docker%20pulls&style=flat-square)](https://hub.docker.com/r/lphllc/fedora) | [![fedora Quay architectures](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fquay.io%2Fapi%2Fv1%2Frepository%2Flowpricehosting%2Ffedora%2Ftag%2F%3FspecificTag%3Dlatest%26onlyActiveTags%3Dtrue&query=%24.tags%5B0%5D.child_manifest_count&label=Quay%20architectures&color=ee0000&style=flat-square&cacheSeconds=300)](https://quay.io/repository/lowpricehosting/fedora?tab=tags) |
+| [AlmaLinux](https://github.com/Low-Price-Hosting/AlmaLinux) | [![Số lượt tải xuống almalinux từ GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Falmalinux&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square&cacheSeconds=300)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/almalinux) | [![almalinux Docker Hub pulls](https://img.shields.io/docker/pulls/lphllc/almalinux?label=Docker%20pulls&style=flat-square)](https://hub.docker.com/r/lphllc/almalinux) | [![almalinux Quay architectures](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fquay.io%2Fapi%2Fv1%2Frepository%2Flowpricehosting%2Falmalinux%2Ftag%2F%3FspecificTag%3Dlatest%26onlyActiveTags%3Dtrue&query=%24.tags%5B0%5D.child_manifest_count&label=Quay%20architectures&color=ee0000&style=flat-square&cacheSeconds=300)](https://quay.io/repository/lowpricehosting/almalinux?tab=tags) |
+| [Arch Linux](https://github.com/Low-Price-Hosting/ArchLinux) | [![Số lượt tải xuống archlinux từ GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Farchlinux&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square&cacheSeconds=300)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/archlinux) | [![archlinux Docker Hub pulls](https://img.shields.io/docker/pulls/lphllc/archlinux?label=Docker%20pulls&style=flat-square)](https://hub.docker.com/r/lphllc/archlinux) | [![archlinux Quay architectures](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fquay.io%2Fapi%2Fv1%2Frepository%2Flowpricehosting%2Farchlinux%2Ftag%2F%3FspecificTag%3Dlatest%26onlyActiveTags%3Dtrue&query=%24.tags%5B0%5D.child_manifest_count&label=Quay%20architectures&color=ee0000&style=flat-square&cacheSeconds=300)](https://quay.io/repository/lowpricehosting/archlinux?tab=tags) |
+| [Rocky Linux](https://github.com/Low-Price-Hosting/RockyLinux) | [![Số lượt tải xuống rockylinux từ GHCR](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fgithub.com%2Forgs%2FLow-Price-Hosting%2Fpackages%2Fcontainer%2Fpackage%2Frockylinux&search=Total%20downloads%3C%2Fspan%3E%5Cs%2A%3Ch3%20title%3D%22%28%5B0-9%2C%5D%2B%29%22%3E&replace=%241&label=GHCR%20downloads&color=0969da&style=flat-square&cacheSeconds=300)](https://github.com/orgs/Low-Price-Hosting/packages/container/package/rockylinux) | [![rockylinux Docker Hub pulls](https://img.shields.io/docker/pulls/lphllc/rockylinux?label=Docker%20pulls&style=flat-square)](https://hub.docker.com/r/lphllc/rockylinux) | [![rockylinux Quay architectures](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fquay.io%2Fapi%2Fv1%2Frepository%2Flowpricehosting%2Frockylinux%2Ftag%2F%3FspecificTag%3Dlatest%26onlyActiveTags%3Dtrue&query=%24.tags%5B0%5D.child_manifest_count&label=Quay%20architectures&color=ee0000&style=flat-square&cacheSeconds=300)](https://quay.io/repository/lowpricehosting/rockylinux?tab=tags) |
 
-Huy hiệu tải xuống hiển thị giá trị **Tổng lượt tải xuống** trên GitHub Packages. Lượt tải theo phiên bản và các kiến trúc đã phát hành nằm trên trang gói tương ứng. Bộ nhớ đệm có thể khiến bộ đếm cập nhật chậm; bộ đếm không đọc được không có nghĩa là **0**.
+Huy hiệu GHCR và Docker Hub hiển thị tổng lượt tải xuống; huy hiệu Quay hiển thị số kiến trúc của thẻ `latest`. Nhấp vào huy hiệu để xem các thẻ và kiến trúc. Bộ đếm được thống kê riêng cho từng registry; bộ nhớ đệm có thể làm chậm cập nhật.
+
+```bash
+docker pull ghcr.io/low-price-hosting/ubuntu:latest
+docker pull docker.io/lphllc/ubuntu:latest
+docker pull quay.io/lowpricehosting/ubuntu:latest
+```
 
 <a id="versions-and-architectures"></a>
 
@@ -62,28 +70,28 @@ Tham chiếu phiên bản và kiến trúc từ [kế hoạch khám phá ngày 8
 | Arch Linux | `rolling` | `amd64` |
 | Rocky Linux | `8` | `amd64`, `arm64` |
 | Rocky Linux | `9` | `amd64`, `arm64`, `ppc64le`, `s390x` |
-| Rocky Linux | `10` | `amd64`, `arm64`, `ppc64le`, `riscv64`*, `s390x` |
+| Rocky Linux | `10` | `amd64`, `arm64`, `ppc64le`, `riscv64`, `s390x` |
 
-\* Mục tiêu Rocky Linux 10 `riscv64` đã bị loại khỏi quá trình xây dựng trong kế hoạch này. Tập hợp kiến trúc có thể khác nhau tùy theo phiên bản.
+Tập hợp kiến trúc có thể khác nhau tùy theo phiên bản.
 
 Kiểm tra các kiến trúc thực tế của một thẻ:
 
 ```bash
-docker buildx imagetools inspect ghcr.io/low-price-hosting/ubuntu:24.04
-docker buildx imagetools inspect --raw ghcr.io/low-price-hosting/ubuntu:24.04
+docker buildx imagetools inspect ghcr.io/low-price-hosting/ubuntu:latest
+docker buildx imagetools inspect --raw ghcr.io/low-price-hosting/ubuntu:latest
 ```
 
 <a id="quick-start"></a>
 
 ## Sử dụng nhanh
 
-Chọn **thẻ đã phát hành** mà bạn muốn sử dụng thay cho `24.04` trong các ví dụ. Không cần đăng nhập GHCR để tải xuống các ảnh công khai.
+Chọn **thẻ đã phát hành** mà bạn muốn sử dụng thay cho `latest` trong các ví dụ. Không cần đăng nhập GHCR để tải xuống các ảnh công khai.
 
 ### Tải xuống và chạy
 
 ```bash
-docker pull ghcr.io/low-price-hosting/ubuntu:24.04
-docker run --rm -it ghcr.io/low-price-hosting/ubuntu:24.04 /bin/sh
+docker pull ghcr.io/low-price-hosting/ubuntu:latest
+docker run --rm -it ghcr.io/low-price-hosting/ubuntu:latest /bin/sh
 ```
 
 Docker chọn từ thẻ đa kiến trúc ảnh phù hợp với kiến trúc của máy tính bạn.
@@ -91,10 +99,10 @@ Docker chọn từ thẻ đa kiến trúc ảnh phù hợp với kiến trúc c�
 ### Chọn kiến trúc
 
 ```bash
-docker pull --platform linux/arm64 ghcr.io/low-price-hosting/ubuntu:24.04
+docker pull --platform linux/arm64 ghcr.io/low-price-hosting/ubuntu:latest
 
 docker run --rm --platform linux/arm64 \
-  ghcr.io/low-price-hosting/ubuntu:24.04 \
+  ghcr.io/low-price-hosting/ubuntu:latest \
   /bin/sh -c 'cat /etc/os-release'
 ```
 
@@ -104,7 +112,7 @@ docker run --rm --platform linux/arm64 \
 
 ```bash
 docker image inspect --format '{{json .RepoDigests}}' \
-  ghcr.io/low-price-hosting/ubuntu:24.04
+  ghcr.io/low-price-hosting/ubuntu:latest
 
 # Thay <digest> bằng giá trị SHA256 của ảnh.
 docker pull ghcr.io/low-price-hosting/ubuntu@sha256:<digest>
@@ -115,7 +123,7 @@ Thẻ phiên bản có thể được cập nhật; giá trị băm cho phép b�
 ### Sử dụng trong ảnh của bạn
 
 ```dockerfile
-FROM ghcr.io/low-price-hosting/ubuntu:24.04
+FROM ghcr.io/low-price-hosting/ubuntu:latest
 
 COPY app/ /opt/app/
 WORKDIR /opt/app
@@ -150,28 +158,6 @@ gh workflow run build-base-images.yml \
 
 Huy hiệu xây dựng ở trên hiển thị kết quả của quy trình công việc gần nhất; một lần chạy chỉ để xác minh sẽ không phát hành ảnh.
 
-<a id="pipeline"></a>
-
-## Quy trình xây dựng
-
-```mermaid
-flowchart LR
-    D["Khám phá phiên bản và kiến trúc"] --> B["Xây dựng"]
-    B --> T["Kiểm thử"]
-    T --> P["Phát hành"]
-    P --> G["Ảnh GHCR đa kiến trúc"]
-```
-
-| Giai đoạn | Thao tác thực hiện với ảnh |
-|---|---|
-| **Xây dựng** | Tạo hệ thống tệp gốc/ảnh bằng công thức tạo container của bản phân phối. |
-| **Kiểm thử** | Chạy ảnh trên một máy thực thi riêng; kiểm tra định danh bản phân phối, trình quản lý gói, kiến trúc và nhãn nguồn. |
-| **Phát hành** | Phát hành thẻ phiên bản đa kiến trúc khi tất cả kiến trúc dự kiến của một phiên bản vượt qua kiểm thử. |
-
-Mỗi mục tiêu xây dựng và kiểm thử sử dụng một máy thực thi riêng. Các bài kiểm thử chỉ kiểm tra hoạt động cơ bản; không phải kiểm thử toàn diện về khả năng tương thích của ứng dụng.
-
-Các phiên bản và kiến trúc mới được phát hiện tự động từ danh mục nguồn. Chúng được đưa vào kế hoạch xây dựng khi công thức tương ứng, nhánh nguồn, bản kê khởi tạo và kho gói đã sẵn sàng. Các nguồn được cập nhật bằng quy trình Cron mỗi giờ; lịch chạy của GitHub có thể bị trễ.
-
 <a id="oci-metadata"></a>
 
 ## Thẻ và thông tin ảnh
@@ -186,7 +172,7 @@ Thông tin nguồn, phiên bản và quá trình xây dựng ảnh nằm trong s
 
 ```bash
 docker image inspect --format '{{json .Config.Labels}}' \
-  ghcr.io/low-price-hosting/ubuntu:24.04
+  ghcr.io/low-price-hosting/ubuntu:latest
 ```
 
 `org.opencontainers.image.source` cho biết kho công thức nguồn, `org.opencontainers.image.version` cho biết phiên bản và `io.low-price-hosting.build.source` cho biết mã xây dựng. Có thể đọc chỉ mục đa kiến trúc và chú thích kiến trúc bằng `docker buildx imagetools inspect --raw`.
