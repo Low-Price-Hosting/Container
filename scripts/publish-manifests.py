@@ -176,18 +176,27 @@ def publish(plan, directory, validate_only=False):
     statuses = []
     failures = list(plan.get('errors', []))
     for (distribution, version), targets in groups.items():
-        approved, missing = {}, []
+        approved, missing, discovery_errors = {}, [], []
         for target in targets:
+            if target.get('error'):
+                discovery_errors.append(target['platform'] + ': ' + target['error'])
+                continue
             item = records.get(target['key']) or target.get('reused')
             if (not item or item.get('tested') is not True or (not validate_only and item.get('pushed') is not True)
                     or item['platform'] != target['platform']
-                    or item.get('fingerprint') != target.get('fingerprint') or target.get('error')):
+                    or item.get('fingerprint') != target.get('fingerprint')):
                 missing.append(target['platform'])
             else:
                 approved[target['key']] = item
-        if missing:
-            failures.append(dict(distribution=distribution, version=version, error='Untested/missing: ' + ', '.join(missing)))
-            statuses.append((distribution, version, len(approved), len(targets), 'Skipped: incomplete tests'))
+        if discovery_errors or missing:
+            reasons = []
+            if discovery_errors:
+                reasons.append('Source discovery failed: ' + '; '.join(discovery_errors))
+            if missing:
+                reasons.append('Untested/missing: ' + ', '.join(missing))
+            failures.append(dict(distribution=distribution, version=version, error='; '.join(reasons)))
+            status = 'Skipped: source discovery failed' if discovery_errors else 'Skipped: incomplete tests'
+            statuses.append((distribution, version, len(approved), len(targets), status))
             continue
         if validate_only:
             statuses.append((distribution, version, len(approved), len(targets), 'Tests passed; publication disabled'))

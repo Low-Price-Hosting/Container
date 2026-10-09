@@ -7,14 +7,26 @@ import json
 import pathlib
 import re
 import subprocess
+import sys
 import tarfile
+import time
 import xml.etree.ElementTree as ET
 
 
 @functools.lru_cache(maxsize=None)
 def download(url):
-    return subprocess.check_output(['curl', '--fail', '--silent', '--show-error', '--location',
-                                    '--retry', '3', '--connect-timeout', '15', '--max-time', '90', url])
+    for attempt in range(3):
+        try:
+            # A separate subprocess discards partial stdout after a connection
+            # reset instead of concatenating it with the next complete response.
+            return subprocess.check_output(['curl', '--fail', '--silent', '--show-error', '--location',
+                                            '--retry', '3', '--connect-timeout', '15', '--max-time', '90', url])
+        except subprocess.CalledProcessError as error:
+            # curl's default HTTP retry does not cover recv errors (exit 56).
+            if error.returncode != 56 or attempt == 2:
+                raise
+            print(f'Package metadata connection reset; retrying ({attempt + 1}/3): {url}', file=sys.stderr)
+            time.sleep(5 * (attempt + 1))
 
 
 def index_content(kind, data, architecture):
