@@ -8,6 +8,7 @@ apt-get install -y --no-install-recommends live-build debootstrap germinate \
   jq sudo wget rsync attr gettext xz-utils grep-dctrl uuid-runtime fdisk
 mkdir /recipe /work
 cp -a /source/. /recipe/
+python3 /build-tools/ubuntu/prepare-config.py /recipe/live-build/auto/config
 ln -s /recipe /usr/share/livecd-rootfs
 export LIVECD_ROOTFS_ROOT=/usr/share/livecd-rootfs
 export PROJECT=ubuntu-oci SUBPROJECT= IMAGEFORMAT=plain
@@ -18,10 +19,6 @@ SUITE=$( . /etc/os-release; echo "$VERSION_CODENAME" )
 export SUITE
 cd /work
 ln -s /recipe/live-build/auto auto
-# ubuntu-oci installs debootstrap's minimal set and does not consume seed
-# tasks. Supply the supported germinate-cache marker to skip unrelated seeds.
-mkdir -p config/germinate-output
-touch config/germinate-output/structure
 # The upstream OCI profile sets the minimal package set and container cleanup.
 lb config --mode ubuntu --distribution "$SUITE" --architecture "$ARCH" --binary-images tar
 lb build

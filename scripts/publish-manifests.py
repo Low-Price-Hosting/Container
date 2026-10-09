@@ -196,25 +196,37 @@ def publish(plan, directory, validate_only=False):
             repository, tags, index = release_index(distribution, version, targets, approved)
             docker_repository = 'docker.io/lphllc/' + distribution.lower()
             quay_destination = quay_repository(distribution)
-            # Quay can automatically create private repositories when issuing a push
-            # token. Check public visibility anonymously before any push-scoped call.
-            require_public_quay_repository(quay_destination)
-            # Reused GHCR records carry the same tested approval as newly built records.
-            # Copy immutable child manifests, including their blobs, without rebuilding.
-            for target in targets:
-                source = approved[target['key']]['image']
-                for destination in (docker_repository, quay_destination):
-                    image = destination + '@' + approved[target['key']]['descriptor']['digest']
-                    subprocess.run(['bash', str(pathlib.Path(__file__).with_name('push-images.sh')),
-                                    '--copy', source, image], check=True)
-            # Identical index bytes preserve variants, tested fingerprints and OCI labels.
-            publish_index(repository, tags, index)
-            publish_index(docker_repository, tags, index)
-            publish_index(quay_destination, tags, index)
-            statuses.append((distribution, version, len(approved), len(targets), 'Published: GHCR + Docker Hub + Quay'))
         except Exception as error:
             failures.append(dict(distribution=distribution, version=version, error=str(error)))
             statuses.append((distribution, version, len(approved), len(targets), 'Publish failed'))
+            continue
+        published, failed = [], []
+        for label, destination in (('GHCR', repository), ('Docker Hub', docker_repository),
+                                   ('Quay', quay_destination)):
+            try:
+                # A failed secondary registry must not prevent GHCR's tested cache
+                # and the other registry from receiving this complete release.
+                if label == 'Quay':
+                    # A push token can create a private Quay repository. Check
+                    # public visibility before requesting any push-scoped token.
+                    require_public_quay_repository(destination)
+                if destination != repository:
+                    for target in targets:
+                        item = approved[target['key']]
+                        image = destination + '@' + item['descriptor']['digest']
+                        subprocess.run(['bash', str(pathlib.Path(__file__).with_name('push-images.sh')),
+                                        '--copy', item['image'], image], check=True)
+                # Identical bytes preserve architecture variants and tested metadata.
+                publish_index(destination, tags, index)
+                published.append(label)
+            except Exception as error:
+                failed.append(label)
+                failures.append(dict(distribution=distribution, version=version,
+                                     registry=label, error=f'{label}: {error}'))
+        status = 'Published: ' + ' + '.join(published) if published else 'Publish failed'
+        if failed:
+            status += '; Failed: ' + ' + '.join(failed)
+        statuses.append((distribution, version, len(approved), len(targets), status))
     result = os.environ.get('PUBLICATION_RESULT')
     if result:
         pathlib.Path(result).write_text(json.dumps(dict(statuses=statuses, failures=failures)))
